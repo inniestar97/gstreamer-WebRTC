@@ -13,7 +13,7 @@ pkg_check_modules(gst REQUIRED IMPORTED_TARGET gstreamer-base-1.0)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${gst_INCLUDE_DIR})
 
-add_executable(gstreamerClient main.cpp)
+add_executable(gstreamerSender main.cpp)
 
 # add_backward(gstreamerClient)
-target_link_libraries(gstreamerClient PkgConfig::gst)
+target_link_libraries(gstreamerSender PkgConfig::gst)
