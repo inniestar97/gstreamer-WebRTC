@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
 
   GstElement *pipeline;
   GstElement *videosrc; // src elements
-  GstElement *videoconvert, *queue, *x264enc, *rtph264pay; // other elements
+  GstElement *videoconvert, *videoscale, *queue, *x264enc, *rtph264pay; // other elements
   // GstElement *rawCapsFilter, *h264CapsFilter; // capsfilter
   GstElement *udpsink; // sink elements
   GstCaps *rawcaps, *h264caps;
@@ -28,18 +28,17 @@ int main(int argc, char **argv) {
   g_object_set(G_OBJECT(videosrc), "device", "/dev/video0", NULL);
 
   videoconvert = gst_element_factory_make("videoconvert", "videoconvert");
+  videoscale = gst_element_factory_make("videoscale", "videoscale");
   queue = gst_element_factory_make("queue", "queue");
   x264enc = gst_element_factory_make("x264enc", "x264enc");
   g_object_set(x264enc, "tune", /* zerolatency */0x00000004, "bitrate", 1000, "key-int-max", 30, NULL);
 
-  // rawcaps = gst_caps_new_simple(
-  //   "video/x-raw",
-  //   "width",      G_TYPE_INT,         WIDTH,
-  //   "height",     G_TYPE_INT,         HEIGHT,
-  //   NULL
-  // );
-  // rawCapsFilter = gst_element_factory_make("capsfilter", "raw-capsfilter");
-  // g_object_set(rawCapsFilter, "caps", rawcaps, NULL);
+  rawcaps = gst_caps_new_simple(
+    "video/x-raw",
+    "width",      G_TYPE_INT,         WIDTH,
+    "height",     G_TYPE_INT,         HEIGHT,
+    NULL
+  );
 
   h264caps = gst_caps_new_simple(
     "video/x-h264",
@@ -52,7 +51,7 @@ int main(int argc, char **argv) {
   udpsink = gst_element_factory_make("udpsink", "udpsink");
   g_object_set(udpsink, "host", TARGET_IP, "port", TARGET_PORT, NULL);
 
-  if (!pipeline || !videosrc || !videoconvert || !queue ||
+  if (!pipeline || !videosrc || !videoconvert || !videoscale || !queue ||
       !x264enc || !rtph264pay || !udpsink || !rawcaps)
   {
 
@@ -60,9 +59,11 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  gst_bin_add_many(GST_BIN(pipeline), videosrc, videoconvert, queue, x264enc, rtph264pay, udpsink, NULL);
+  gst_bin_add_many(GST_BIN(pipeline), videosrc, videoconvert, videoscale, queue, x264enc, rtph264pay, udpsink, NULL);
 
-  if (!gst_element_link_many(videosrc, videoconvert, queue, x264enc, NULL) ||
+  if (!gst_element_link_many(videosrc, videoconvert, videoscale, NULL) ||
+      !gst_element_link_filtered(videoscale, queue, rawcaps) ||
+      !gst_element_link(queue, x264enc) ||
       !gst_element_link_filtered(x264enc, rtph264pay, h264caps) ||
       !gst_element_link(rtph264pay, udpsink))
   {
@@ -70,7 +71,7 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  // gst_caps_unref(rawcaps);
+  gst_caps_unref(rawcaps);
   gst_caps_unref(h264caps);
 
   ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
