@@ -46,8 +46,6 @@ int main(int argc, char **argv) {
     "profile", G_TYPE_STRING, "constrained-baseline",
     NULL
   );
-  // h264CapsFilter = gst_element_factory_make("capsfilter", "h264-capsfilter");
-  // g_object_set(h264CapsFilter, "caps", h264caps, NULL);
 
   rtph264pay = gst_element_factory_make("rtph264pay", "rtph264pay");
   g_object_set(rtph264pay, "pt", 96, "mtu", 1200, NULL);
@@ -56,8 +54,6 @@ int main(int argc, char **argv) {
 
   if (!pipeline || !videosrc || !videoconvert || !queue ||
       !x264enc || !rtph264pay || !udpsink || !rawcaps)
-  // if (!pipeline || !videosrc || !rawCapsFilter || !videoconvert || !queue ||
-  //     !x264enc || !h264CapsFilter || !rtph264pay || !udpsink || !rawcaps)
   {
 
     g_printerr("Not all elements could be created.\n");
@@ -65,16 +61,10 @@ int main(int argc, char **argv) {
   }
 
   gst_bin_add_many(GST_BIN(pipeline), videosrc, videoconvert, queue, x264enc, rtph264pay, udpsink, NULL);
-  // gst_bin_add_many(GST_BIN(pipeline), videosrc, rawCapsFilter, videoconvert,
-  //                 queue, x264enc, h264CapsFilter, rtph264pay, udpsink, NULL);
 
-  if (!gst_element_link(videosrc, videoconvert) ||
-      !gst_element_link(videoconvert, queue) ||
-      !gst_element_link(queue, x264enc) ||
+  if (!gst_element_link_many(videosrc, videoconvert, queue, x264enc, NULL) ||
       !gst_element_link_filtered(x264enc, rtph264pay, h264caps) ||
       !gst_element_link(rtph264pay, udpsink))
-  // if (!gst_element_link_many(videosrc, rawCapsFilter, videoconvert, queue,
-  //                            x264enc, h264CapsFilter, rtph264pay, udpsink, NULL))
   {
     g_printerr("Elements could not be linked.\n");
     return -1;
