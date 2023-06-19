@@ -1,0 +1,5 @@
+/Users/isang-in/git/gstreamerSocket/build/CMakeFiles/edit_cache.dir
+/Users/isang-in/git/gstreamerSocket/build/CMakeFiles/rebuild_cache.dir
+/Users/isang-in/git/gstreamerSocket/build/gstreamerSender/CMakeFiles/gstreamerClient.dir
+/Users/isang-in/git/gstreamerSocket/build/gstreamerSender/CMakeFiles/edit_cache.dir
+/Users/isang-in/git/gstreamerSocket/build/gstreamerSender/CMakeFiles/rebuild_cache.dir
