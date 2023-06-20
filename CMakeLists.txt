@@ -5,6 +5,8 @@ project(gsteamerCS VERSION 0.1.0 LANGUAGES C CXX)
 # enable_testing()
 
 add_subdirectory(gstreamerSender)
+add_subdirectory(gstreamerSender_buffer)
+add_subdirectory(gstreamerReceiver)
 
 # add_executable(gsteamerCS main.cpp)
 
