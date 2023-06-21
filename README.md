@@ -9,7 +9,7 @@ cd gstreamer-react
 git submodule update --init --recursive --depth 1
 ```
 
-## POSIX-compliant operating system (LINUX and APPLE MacOS)
+## POSIX-compliant operating system (LINUX and Apple MacOS)
 
 ### debug
 
