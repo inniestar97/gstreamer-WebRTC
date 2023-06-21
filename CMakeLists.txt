@@ -180,39 +180,39 @@ set(LIBDATACHANNEL_IMPL_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/impl/wshandshake.hpp
 )
 
-set(TESTS_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/connectivity.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/negotiated.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/turn_connectivity.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/track.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/capi_connectivity.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/capi_track.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/websocket.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/websocketserver.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/capi_websocketserver.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/benchmark.cpp
-)
+# set(TESTS_SOURCES
+#     ${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/test/connectivity.cpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/test/negotiated.cpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/test/turn_connectivity.cpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/test/track.cpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/test/capi_connectivity.cpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/test/capi_track.cpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/test/websocket.cpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/test/websocketserver.cpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/test/capi_websocketserver.cpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/test/benchmark.cpp
+# )
 
-set(TESTS_UWP_RESOURCES
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/Logo.png
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/package.appxManifest
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/SmallLogo.png
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/SmallLogo44x44.png
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/SplashScreen.png
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/StoreLogo.png
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/Windows_TemporaryKey.pfx
-)
+# set(TESTS_UWP_RESOURCES
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/Logo.png
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/package.appxManifest
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/SmallLogo.png
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/SmallLogo44x44.png
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/SplashScreen.png
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/StoreLogo.png
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/tests/Windows_TemporaryKey.pfx
+# )
 
-set(BENCHMARK_UWP_RESOURCES
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/Logo.png
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/package.appxManifest
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/SmallLogo.png
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/SmallLogo44x44.png
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/SplashScreen.png
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/StoreLogo.png
-	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/Windows_TemporaryKey.pfx
-)
+# set(BENCHMARK_UWP_RESOURCES
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/Logo.png
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/package.appxManifest
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/SmallLogo.png
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/SmallLogo44x44.png
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/SplashScreen.png
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/StoreLogo.png
+# 	${CMAKE_CURRENT_SOURCE_DIR}/test/uwp/benchmark/Windows_TemporaryKey.pfx
+# )
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
@@ -251,22 +251,26 @@ add_library(datachannel SHARED
 	${LIBDATACHANNEL_SOURCES}
 	${LIBDATACHANNEL_HEADERS}
 	${LIBDATACHANNEL_IMPL_SOURCES}
-	${LIBDATACHANNEL_IMPL_HEADERS})
+	${LIBDATACHANNEL_IMPL_HEADERS}
+)
 set_target_properties(datachannel PROPERTIES
 	VERSION ${PROJECT_VERSION}
 	SOVERSION ${PROJECT_VERSION}
 	CXX_STANDARD 17
-	CXX_VISIBILITY_PRESET default)
+	CXX_VISIBILITY_PRESET default
+)
 target_compile_definitions(datachannel PRIVATE RTC_EXPORTS)
 
 add_library(datachannel-static STATIC EXCLUDE_FROM_ALL
 	${LIBDATACHANNEL_SOURCES}
 	${LIBDATACHANNEL_HEADERS}
 	${LIBDATACHANNEL_IMPL_SOURCES}
-	${LIBDATACHANNEL_IMPL_HEADERS})
+	${LIBDATACHANNEL_IMPL_HEADERS}
+)
 set_target_properties(datachannel-static PROPERTIES
 	VERSION ${PROJECT_VERSION}
-	CXX_STANDARD 17)
+	CXX_STANDARD 17
+)
 target_compile_definitions(datachannel-static PRIVATE RTC_EXPORTS)
 target_compile_definitions(datachannel-static PUBLIC RTC_STATIC)
 
@@ -423,29 +427,29 @@ if(WARNINGS_AS_ERRORS)
 	target_compile_options(datachannel-static PRIVATE -Werror)
 endif()
 
-install(TARGETS datachannel EXPORT LibDataChannelTargets
-	RUNTIME DESTINATION bin
-	LIBRARY DESTINATION lib
-	ARCHIVE DESTINATION lib
-)
+# install(TARGETS datachannel EXPORT LibDataChannelTargets
+# 	RUNTIME DESTINATION bin
+# 	LIBRARY DESTINATION lib
+# 	ARCHIVE DESTINATION lib
+# )
 
-install(FILES ${LIBDATACHANNEL_HEADERS}
-	DESTINATION include/rtc
-)
+# install(FILES ${LIBDATACHANNEL_HEADERS}
+# 	DESTINATION include/rtc
+# )
 
-# Export targets
-install(
-	EXPORT LibDataChannelTargets
-	FILE LibDataChannelTargets.cmake
-	NAMESPACE LibDataChannel::
-	DESTINATION lib/cmake/LibDataChannel
-)
+# # Export targets
+# install(
+# 	EXPORT LibDataChannelTargets
+# 	FILE LibDataChannelTargets.cmake
+# 	NAMESPACE LibDataChannel::
+# 	DESTINATION lib/cmake/LibDataChannel
+# )
 
-# Export config
-install(
-	FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/LibDataChannelConfig.cmake
-	DESTINATION lib/cmake/LibDataChannel
-)
+# # Export config
+# install(
+# 	FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/LibDataChannelConfig.cmake
+# 	DESTINATION lib/cmake/LibDataChannel
+# )
 
 # Export config version
 include(CMakePackageConfigHelpers)
@@ -472,6 +476,7 @@ if (NOT NO_EXAMPLES)
 	  add_subdirectory(examples/gstreamerSender)
 	  add_subdirectory(examples/gstreamerSender_buffer)
 	  add_subdirectory(examples/videoStreamSender)
+	  add_subdirectory(examples/client)
   endif()
 endif()
 
