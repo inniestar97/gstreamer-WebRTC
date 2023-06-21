@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 
   pipeline = gst_pipeline_new("main-pipline");
 
-#ifdef __LINUX___
+#ifdef __linux___
   videosrc = gst_element_factory_make("v4l2src", "v4l2src");
   g_object_set(G_OBJECT(videosrc), "device", "/dev/video0", NULL);
 #elif __APPLE__
