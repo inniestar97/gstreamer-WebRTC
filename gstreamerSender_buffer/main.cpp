@@ -6,6 +6,10 @@
 #include <unistd.h>
 #include <iomanip>
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
 #define TARGET_IP  "127.0.0.1"
 #define TARGET_PORT 5000
 
@@ -88,8 +92,12 @@ int main(int argc, char **argv) {
 
   pipeline = gst_pipeline_new("main-pipline");
 
+#ifdef __LINUX__
   videosrc = gst_element_factory_make("v4l2src", "v4l2src");
   g_object_set(G_OBJECT(videosrc), "device", "/dev/video0", NULL);
+#elif __APPLE__
+  videosrc = gst_element_factory_make("avfvideosrc", "avfvideosrc") ;
+#endif
 
   videoconvert = gst_element_factory_make("videoconvert", "videoconvert");
   videoscale = gst_element_factory_make("videoscale", "videoscale");
