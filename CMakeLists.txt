@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.7)
 project(RemoteControlSystem
-	VERSION 0.2.02.0
+	VERSION 0.2.0
 	LANGUAGES CXX C)
+set(CMAKE_CXX_STANDARD 17)
 set(PROJECT_DESCRIPTION "C/C++ Remote Control System using WebRTC based on WebSocket")
 
 # Options
@@ -48,15 +49,6 @@ endif()
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_SHARED_LIBS OFF) # to force usrsctp to be built static
-
-# if(WIN32)
-# 	add_definitions(-DWIN32_LEAN_AND_MEAN)
-# 	if(MSVC)
-# 		add_definitions(-DNOMINMAX)
-# 		add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-# 		add_definitions(-D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
-# 	endif()
-# endif()
 
 set(LIBDATACHANNEL_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/src/candidate.cpp
@@ -426,13 +418,8 @@ if(NOT MSVC)
 endif()
 
 if(WARNINGS_AS_ERRORS)
-	# if(MSVC)
-	# 	target_compile_options(datachannel PRIVATE /WX)
-	# 	target_compile_options(datachannel-static PRIVATE /WX)
-	# else()
-		target_compile_options(datachannel PRIVATE -Werror)
-		target_compile_options(datachannel-static PRIVATE -Werror)
-	# endif()
+	target_compile_options(datachannel PRIVATE -Werror)
+	target_compile_options(datachannel-static PRIVATE -Werror)
 endif()
 
 install(TARGETS datachannel EXPORT LibDataChannelTargets
@@ -467,47 +454,6 @@ write_basic_package_version_file(
 	COMPATIBILITY SameMajorVersion)
 install(FILES ${CMAKE_BINARY_DIR}/LibDataChannelConfigVersion.cmake
 	DESTINATION lib/cmake/LibDataChannel)
-
-# # Tests
-# if(NOT NO_TESTS)
-# 	if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
-# 		# Add resource files needed for UWP apps.
-# 		add_executable(datachannel-tests ${TESTS_SOURCES} ${TESTS_UWP_RESOURCES})
-# 	else()
-# 		add_executable(datachannel-tests ${TESTS_SOURCES})
-# 	endif()
-
-# 	set_target_properties(datachannel-tests PROPERTIES
-# 		VERSION ${PROJECT_VERSION}
-# 		CXX_STANDARD 17
-# 		OUTPUT_NAME tests)
-
-# 	set_target_properties(datachannel-tests PROPERTIES
-# 		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.github.paullouisageneau.libdatachannel.tests)
-
-# 	target_include_directories(datachannel-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-# 	target_link_libraries(datachannel-tests datachannel Threads::Threads)
-
-# 	# Benchmark
-# 	if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
-# 		# Add resource files needed for UWP apps.
-# 		add_executable(datachannel-benchmark test/benchmark.cpp ${BENCHMARK_UWP_RESOURCES})
-# 	else()
-# 		add_executable(datachannel-benchmark test/benchmark.cpp)
-# 	endif()
-
-# 	set_target_properties(datachannel-benchmark PROPERTIES
-# 		VERSION ${PROJECT_VERSION}
-# 		CXX_STANDARD 17
-# 		OUTPUT_NAME benchmark)
-
-# 	set_target_properties(datachannel-benchmark PROPERTIES
-# 		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER com.github.paullouisageneau.libdatachannel.benchmark)
-
-# 	target_compile_definitions(datachannel-benchmark PRIVATE BENCHMARK_MAIN=1)
-# 	target_include_directories(datachannel-benchmark PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-# 	target_link_libraries(datachannel-benchmark datachannel Threads::Threads)
-# endif()
 
 # Examples
 add_subdirectory(examples/gstreamerSender)

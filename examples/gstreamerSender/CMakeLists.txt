@@ -3,10 +3,6 @@ project(gstreamerSender
     VERSION 0.1.0
     LANGUAGES C CXX
 )
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# find_package()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(gst REQUIRED IMPORTED_TARGET gstreamer-base-1.0)
 
@@ -15,5 +11,4 @@ include_directories(${gst_INCLUDE_DIR})
 
 add_executable(gstreamerSender main.cpp)
 
-# add_backward(gstreamerClient)
 target_link_libraries(gstreamerSender PkgConfig::gst)
