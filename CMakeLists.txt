@@ -3,6 +3,7 @@ project(RemoteControlSystem
 	VERSION 0.2.0
 	LANGUAGES CXX C)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(PROJECT_DESCRIPTION "C/C++ Remote Control System using WebRTC based on WebSocket")
 
 # Options
@@ -455,9 +456,25 @@ write_basic_package_version_file(
 install(FILES ${CMAKE_BINARY_DIR}/LibDataChannelConfigVersion.cmake
 	DESTINATION lib/cmake/LibDataChannel)
 
+# library gstreamer
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(gst REQUIRED IMPORTED_TARGET gstreamer-base-1.0)
+# library Nlohmann JSON
+if (USE_SYSTEM_JSON)
+  find_package(nlohmann_json REQUIRED)
+else()
+  add_subdirectory(deps/json EXCLUDE_FROM_ALL)
+endif()
+
 # Examples
-add_subdirectory(examples/gstreamerSender)
-add_subdirectory(examples/gstreamerSender_buffer)
+if (NOT NO_EXAMPLES)
+  if (NOT NO_WEBSOCKET)
+	  add_subdirectory(examples/gstreamerSender)
+	  add_subdirectory(examples/gstreamerSender_buffer)
+	  add_subdirectory(examples/videoStreamSender)
+  endif()
+endif()
+
 # if(NOT NO_EXAMPLES)
 # 	set(JSON_BuildTests OFF CACHE INTERNAL "")
 # 	if(USE_SYSTEM_JSON)
