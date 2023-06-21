@@ -5,6 +5,7 @@ endif()
 
 set(VIDEO_STREAM_SENDER_SRC
   main.cpp
+  src/parse_cl.cpp
 )
 
 # Link libraries
@@ -13,7 +14,7 @@ set(VIDEO_STREAM_SENDER_SRC
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${gst_INCLUDE_DIR})
-include_directories(./include)
+include_directories(include)
 
 add_executable(video-stream-sender ${VIDEO_STREAM_SENDER_SRC})
 
