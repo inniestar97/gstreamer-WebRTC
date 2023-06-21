@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.7)
-project(libdatachannel
-	VERSION 0.18.5
-	LANGUAGES CXX)
-set(PROJECT_DESCRIPTION "C/C++ WebRTC network library featuring Data Channels, Media Transport, and WebSockets")
+project(RemoteControlSystem
+	VERSION 0.2.02.0
+	LANGUAGES CXX C)
+set(PROJECT_DESCRIPTION "C/C++ Remote Control System using WebRTC based on WebSocket")
 
 # Options
 option(USE_MBEDTLS "Use Mbed TLS instead of OpenSSL" OFF)
@@ -17,7 +17,7 @@ option(USE_SYSTEM_JSON "Use system Nlohmann JSON" ${PREFER_SYSTEM_LIB})
 option(NO_WEBSOCKET "Disable WebSocket support" OFF)
 option(NO_MEDIA "Disable media transport support" OFF)
 option(NO_EXAMPLES "Disable examples" OFF)
-option(NO_TESTS "Disable tests build" OFF)
+# option(NO_TESTS "Disable tests build" OFF)
 option(WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(CAPI_STDCALL "Set calling convention of C API callbacks stdcall" OFF)
 option(SCTP_DEBUG "Enable SCTP debugging output to verbose log" OFF)
@@ -49,14 +49,14 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_SHARED_LIBS OFF) # to force usrsctp to be built static
 
-if(WIN32)
-	add_definitions(-DWIN32_LEAN_AND_MEAN)
-	if(MSVC)
-		add_definitions(-DNOMINMAX)
-		add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-		add_definitions(-D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
-	endif()
-endif()
+# if(WIN32)
+# 	add_definitions(-DWIN32_LEAN_AND_MEAN)
+# 	if(MSVC)
+# 		add_definitions(-DNOMINMAX)
+# 		add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+# 		add_definitions(-D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
+# 	endif()
+# endif()
 
 set(LIBDATACHANNEL_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/src/candidate.cpp
@@ -293,10 +293,10 @@ target_include_directories(datachannel-static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR
 target_link_libraries(datachannel-static PRIVATE Threads::Threads)
 target_link_libraries(datachannel-static PRIVATE Usrsctp::Usrsctp plog::plog)
 
-if(WIN32)
-	target_link_libraries(datachannel PUBLIC ws2_32) # winsock2
-	target_link_libraries(datachannel-static PUBLIC ws2_32) # winsock2
-endif()
+# if(WIN32)
+# 	target_link_libraries(datachannel PUBLIC ws2_32) # winsock2
+# 	target_link_libraries(datachannel-static PUBLIC ws2_32) # winsock2
+# endif()
 
 if (NO_WEBSOCKET)
 	target_compile_definitions(datachannel PUBLIC RTC_ENABLE_WEBSOCKET=0)
@@ -426,13 +426,13 @@ if(NOT MSVC)
 endif()
 
 if(WARNINGS_AS_ERRORS)
-	if(MSVC)
-		target_compile_options(datachannel PRIVATE /WX)
-		target_compile_options(datachannel-static PRIVATE /WX)
-	else()
+	# if(MSVC)
+	# 	target_compile_options(datachannel PRIVATE /WX)
+	# 	target_compile_options(datachannel-static PRIVATE /WX)
+	# else()
 		target_compile_options(datachannel PRIVATE -Werror)
 		target_compile_options(datachannel-static PRIVATE -Werror)
-	endif()
+	# endif()
 endif()
 
 install(TARGETS datachannel EXPORT LibDataChannelTargets
