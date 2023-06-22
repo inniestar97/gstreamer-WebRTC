@@ -46,7 +46,7 @@ std::string randomId(size_t length);
 int main(int argc, char **argv) try {
 	Cmdline params(argc, argv);
 
-	rtc::InitLogger(rtc::LogLevel::Info);
+	// rtc::InitLogger(rtc::LogLevel::Info);
 
 	rtc::Configuration config;
 	std::string stunServer = "";
@@ -94,6 +94,8 @@ int main(int argc, char **argv) try {
 			return;
 
 		json message = json::parse(std::get<std::string>(data));
+
+		std::cout << message << std::endl;
 
 		auto it = message.find("id");
 		if (it == message.end())

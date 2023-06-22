@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <iomanip>
 
+#include <chrono>
+
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 #endif
@@ -15,6 +17,9 @@
 
 #define WIDTH   1240
 #define HEIGHT  1080
+
+static std::chrono::high_resolution_clock::time_point store_time;
+int data_size = 0;
 
 GstFlowReturn appsinkCallback(GstElement *sink, int *client_fd) {
   GstSample *sample;
@@ -37,18 +42,34 @@ GstFlowReturn appsinkCallback(GstElement *sink, int *client_fd) {
   // ::send(*client_fd, reinterpret_cast<const char*>(msgToOther.data()), msgToOther.size(), 0);
 
   /* debugging */
-  auto data_len = msgToOther.size() > 16 * 10 ? 16 * 10 : msgToOther.size();
-  std::cout << std::hex;
-  for (size_t i = 0; i < 16 * 10; i++) {
-    std::cout << std::setw(2) << std::setfill('0') << (int) msgToOther[i] << " ";
-    if ((i + 1) % 16 == 0) {
-      std::cout << std::endl;
-    }
+  // auto data_len = msgToOther.size() > 16 * 10 ? 16 * 10 : msgToOther.size();
+  // std::cout << std::hex;
+  // for (size_t i = 0; i < 16 * 10; i++) {
+  //   std::cout << std::setw(2) << std::setfill('0') << (int) msgToOther[i] << " ";
+  //   if ((i + 1) % 16 == 0) {
+  //     std::cout << std::endl;
+  //   }
+  // }
+  // std::cout << std::dec;
+  // if (msgToOther.size() > 16 * 10) {
+  //   std::cout << "..." << std::endl;
+  // }
+
+  std::chrono::high_resolution_clock::time_point cur_time =
+    std::chrono::high_resolution_clock::now();
+
+  double difference =
+    std::chrono::duration_cast<std::chrono::milliseconds>(cur_time - store_time).count();
+
+  if (difference > 1000.) {
+    std::cout << data_size << "byte/s" << std::endl; 
+
+    data_size = 0;
+    store_time = cur_time;
+  } else {
+    data_size += msgToOther.size();
   }
-  std::cout << std::dec;
-  if (msgToOther.size() > 16 * 10) {
-    std::cout << "..." << std::endl;
-  }
+
   /* ---------- send msgToOther using socket ----------- */
 
   gst_sample_unref(sample);

@@ -32,7 +32,7 @@ shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration &c
                                                      weak_ptr<rtc::WebSocket> wws,
                                                      std::string id);
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) try {
     Cmdline params(argc, argv);
 
     rtc::InitLogger(rtc::LogLevel::Info);
@@ -40,24 +40,24 @@ int main(int argc, char *argv[]) {
     rtc::Configuration config;
     std::string stunServer = "";
     if (params.noStun()) {
-		std::cout
-		    << "No STUN server is configured. Only local hosts and public IP addresses supported."
-		    << std::endl;
-	} else {
-		if (params.stunServer().substr(0, 5).compare("stun:") != 0) {
-			stunServer = "stun:";
-		}
-		stunServer += params.stunServer() + ":" + std::to_string(params.stunPort());
-		std::cout << "STUN server is " << stunServer << std::endl;
-		config.iceServers.emplace_back(stunServer);
-	}
+        std::cout
+            << "No STUN server is configured. Only local hosts and public IP addresses supported."
+            << std::endl;
+    } else {
+        if (params.stunServer().substr(0, 5).compare("stun:") != 0) {
+            stunServer = "stun:";
+        }
+        stunServer += params.stunServer() + ":" + std::to_string(params.stunPort());
+        std::cout << "STUN server is " << stunServer << std::endl;
+        config.iceServers.emplace_back(stunServer);
+    }
 
-	if (params.udpMux()) {
-		std::cout << "ICE UDP mux enabled" << std::endl;
-		config.enableIceUdpMux = true;
-	}
+    if (params.udpMux()) {
+        std::cout << "ICE UDP mux enabled" << std::endl;
+        config.enableIceUdpMux = true;
+    }
 
-	localId = "videoStreamSender";
+    localId = "videoStreamSender";
 
     shared_ptr<rtc::WebSocket> ws = std::make_shared<rtc::WebSocket>();
 
@@ -79,9 +79,12 @@ int main(int argc, char *argv[]) {
     ws->onClosed([]() { std::cout << "WebSocket closed" << std::endl; });
 
     ws->onMessage([&config, wws = make_weak_ptr(ws)](auto data) {
-        if (!std::holds_alternative<std::string>(data)) // if data is not string
+        /* Check whether if data is string
+            If data is not string, return  */
+        if (!std::holds_alternative<std::string>(data)) 
             return;
 
+        // Parse data(string) to json format
         json message = json::parse(std::get<std::string>(data));
 
         auto it = message.find("id");
@@ -98,18 +101,146 @@ int main(int argc, char *argv[]) {
 
         shared_ptr<rtc::PeerConnection> pc;
         if (auto jt = peerConnectionMap.find(id); jt != peerConnectionMap.end()) {
+            /*
+                TODO
+                Have to find when enter this section and description specifically
+            */
+            pc = jt->second;
+        } else if (type == "offer") {
+            /*
+                If this peer receive peerconnection offering by other peer
+                then create the peerconnection with received "Id"
+                through WebSocket
+            */
+            std::cout << "Answering to " + id << std::endl;
+            pc = createPeerConnection(config, wws, id);
+        } else {
+            return;
+        }
 
+        if (type == "offer" || type == "answer") {
+            std::string sdp = message["description"].get<std::string>();
+            pc->setRemoteDescription(rtc::Description(sdp, type));
+        } else if (type == "candidate") {
+            std::string sdp = message["candidate"].get<std::string>();
+            std::string mid = message["mid"].get<std::string>();
+            pc->addRemoteCandidate(rtc::Candidate(sdp, mid));
         }
 
     });
 
+    /*
+        Making WebSocket URL to communicatie with signaling server
+        Websocket is just created for communication with signaling server (master)
+    */
+    const std::string wsPrefix =
+        params.webSocketServer().find("://") == std::string::npos ? "ws://" : "";
+    const std::string url = wsPrefix + params.webSocketServer() + ":" +
+                            std::to_string(params.webSocketPort()) + "/" + localId;
 
+    std::cout << "WebSocket URL is " << url << std::endl;
+    /*
+        Try open WebSocket
+        If the WebSocket is open, then "onOpen" callback is called
+    */
+    ws->open(url);
 
+    std::cout << "Wating for signaling to be connected..." << std::endl;
+    wsFuture.get(); // wait here until websocket "onOpen" callback is called
 
+    /*
+        below section is run only the WebSocket is opened
+    */
+    while (true) {
+        std::string remoteId;
+        std::cout << "Enter a remote ID to send offer: ";
+        std::cin >> remoteId;
+        std::cin.ignore();
 
+        if (remoteId.empty())
+            break;
 
+        if (remoteId == localId) {
+            std::cout << "Invalid remote ID (This is the local ID)" << std::endl;
+            continue;
+        }
 
+        std::cout << "Offering to " + remoteId << std::endl;
+        shared_ptr<rtc::PeerConnection> pc = createPeerConnection(config, ws, remoteId);
 
+		// We are the offerer, so create a data channel to initiate the process
+        const std::string label = "This is the gstreamer react test";
+        std::cout << "Create DataChannel with label \"" << label << "\"" << std::endl;
+        shared_ptr<rtc::DataChannel> dc = pc->createDataChannel(label);
 
+        dc->onOpen([remoteId, wdc = make_weak_ptr(dc)]() {
+            std::cout << "DataChannel from " << remoteId << " open" << std::endl;
+            if (auto dataChannelPtr = wdc.lock())
+                dataChannelPtr->send("Hello from " + localId);
+        });
+
+        dc->onClosed([remoteId]() { std::cout << "DataChannel from " << remoteId << " closed" << std::endl; });
+
+        dc->onMessage([remoteId, wdc = make_weak_ptr(dc)](auto data) {
+			// data holds either std::string or rtc::binary
+			if (std::holds_alternative<std::string>(data))
+				std::cout << "Message from " << remoteId << " received: " << std::get<std::string>(data)
+				          << std::endl;
+			else
+				std::cout << "Binary message from " << remoteId
+				          << " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
+        });
+
+        /* Hold and register dataChannel Connection member */
+        dataChannelMap.emplace(remoteId, dc);
+    } 
+
+    std::cout << "Cleaning up..." << std::endl;
+
+    dataChannelMap.clear();
+    peerConnectionMap.clear();
     return 0;
+
+} catch (const std::exception &e) {
+    std::cout << "Error: " << e.what() << std::endl;
+    dataChannelMap.clear();
+    peerConnectionMap.clear();
+    return -1;
+}
+
+shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration &config,
+                                                     weak_ptr<rtc::WebSocket> wws,
+                                                     std::string id) {
+    auto pc = std::make_shared<rtc::PeerConnection>(config);
+
+    pc->onStateChange([](rtc::PeerConnection::State state) {
+        std::cout << "State: " << state << std::endl;
+    });
+
+    pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state) {
+        std::cout << "Gathering State: " << state << std::endl;
+    });
+
+    pc->onLocalDescription([wws, id](rtc::Description description) {
+        json message = {
+            { "id", id },
+            { "type", description.typeString() },
+            { "description", std::string(description) }
+        };
+        if (auto webSocketPtr = wws.lock()) {
+            webSocketPtr->send(message.dump());
+        }
+    });
+
+    // pc->onDataChannel([id](shared_ptr<rtc::DataChannel> dc) {
+    //     std::cout <<
+    //         "DataChannel from" << id << " received with label \"" <<
+    //         dc->label() << "\"" << std::endl;
+
+    //     dc->onOpen()
+    // });
+
+
+    
+
 }
