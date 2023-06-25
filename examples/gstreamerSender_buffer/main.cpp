@@ -21,7 +21,7 @@
 static std::chrono::high_resolution_clock::time_point store_time;
 int data_size = 0;
 
-GstFlowReturn appsinkCallback(GstElement *sink, int *client_fd) {
+GstFlowReturn appsinkCallback(GstElement *sink) {
   GstSample *sample;
   g_signal_emit_by_name(sink, "pull-sample", &sample);
   if (!sample) {
@@ -37,10 +37,15 @@ GstFlowReturn appsinkCallback(GstElement *sink, int *client_fd) {
   std::copy(map.data, map.data + map.size, std::back_inserter(msgToOther));
   gst_buffer_unmap(buffer, &map);
 
-  /* ---------- send msgToOther using socket ----------- */
+  /* ---------- START send msgToOther using socket ----------- */
   /* implement in here */
   // ::send(*client_fd, reinterpret_cast<const char*>(msgToOther.data()), msgToOther.size(), 0);
 
+  
+
+  /* ----------- END send msgToOther using socket ------------ */
+
+  /* --------- START Debugging to print out buffer ---------- */
   /* debugging */
   // auto data_len = msgToOther.size() > 16 * 10 ? 16 * 10 : msgToOther.size();
   // std::cout << std::hex;
@@ -54,23 +59,21 @@ GstFlowReturn appsinkCallback(GstElement *sink, int *client_fd) {
   // if (msgToOther.size() > 16 * 10) {
   //   std::cout << "..." << std::endl;
   // }
+  /* ---------- END Debugging to print out buffer ----------- */
 
-  std::chrono::high_resolution_clock::time_point cur_time =
-    std::chrono::high_resolution_clock::now();
-
-  double difference =
-    std::chrono::duration_cast<std::chrono::milliseconds>(cur_time - store_time).count();
-
-  if (difference > 1000.) {
-    std::cout << data_size << "byte/s" << std::endl; 
-
-    data_size = 0;
-    store_time = cur_time;
-  } else {
-    data_size += msgToOther.size();
-  }
-
-  /* ---------- send msgToOther using socket ----------- */
+  /* ----------- START Benchmark streamdata BPS ------------- */
+  // std::chrono::high_resolution_clock::time_point cur_time =
+  //   std::chrono::high_resolution_clock::now();
+  // double diff =
+  //   std::chrono::duration_cast<std::chrono::milliseconds>(cur_time - store_time).count();
+  // if (diff > 1000.) {
+  //   std::cout << data_size << "byte/s" << std::endl; 
+  //   data_size = 0;
+  //   store_time = cur_time;
+  // } else {
+  //   data_size += msgToOther.size();
+  // }
+  /* ------------ END Benchmark streamdata BPS -------------- */
 
   gst_sample_unref(sample);
 
@@ -90,26 +93,7 @@ int main(int argc, char **argv) {
   GstBus *bus;
   GstMessage *msg;
   GstStateChangeReturn ret;
-  gboolean terminate = FALSE;
-
-  // int status, valread, client_fd;
-  // struct sockaddr_in server_addr;
-  // if ((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-  //   std::cout << "Socket creation error" << std::endl;
-  //   return -1;
-  // }
-
-  // server_addr.sin_family = AF_INET;
-  // server_addr.sin_port = htons(TARGET_PORT);
-  // if (inet_pton(AF_INET, TARGET_IP, &server_addr.sin_addr) <= 0) {
-  //   std::cout << "Invalid address/ Address not supported" << std::endl;
-  //   return -1;
-  // }
-
-  // if ((status = connect(client_fd, (struct sockaddr*) &server_addr, sizeof(server_addr))) < 0) {
-  //   std::cout << "Connect failed" << std::endl;
-  //   return -1;
-  // }
+  gboolean terminate;
 
   pipeline = gst_pipeline_new("main-pipline");
 

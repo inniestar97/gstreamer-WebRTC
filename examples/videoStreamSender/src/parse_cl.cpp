@@ -67,65 +67,64 @@ Cmdline::Cmdline (int argc, char *argv[]) // ISO C++17 not allowed: throw (std::
   optind = 0;
   while ((c = getopt_long (argc, argv, "s:t:w:x:enmhv", long_options, &optind)) != - 1)
     {
-      switch (c)
-        {
-        case 'n':
-          _n = true;
-          break;
+      switch (c) {
+      case 'n':
+        _n = true;
+        break;
 
-		case 'm':
-		  _m = true;
-		  break;
+		  case 'm':
+		    _m = true;
+		    break;
 
-        case 's':
-          _s = optarg;
-          break;
+      case 's':
+        _s = optarg;
+        break;
 
-        case 't':
-          _t = atoi (optarg);
-          if (_t < 0)
-            {
-              std::string err;
-              err += "parameter range error: t must be >= 0";
-              throw (std::range_error(err));
-            }
-          if (_t > 65535)
-            {
-              std::string err;
-              err += "parameter range error: t must be <= 65535";
-              throw (std::range_error(err));
-            }
-          break;
+      case 't':
+        _t = atoi (optarg);
+        if (_t < 0)
+          {
+            std::string err;
+            err += "parameter range error: t must be >= 0";
+            throw (std::range_error(err));
+          }
+        if (_t > 65535)
+          {
+            std::string err;
+            err += "parameter range error: t must be <= 65535";
+            throw (std::range_error(err));
+          }
+        break;
 
-        case 'w':
-          _w = optarg;
-          break;
+      case 'w':
+        _w = optarg;
+        break;
 
-        case 'x':
-          _x = atoi (optarg);
-          if (_x < 0)
-            {
-              std::string err;
-              err += "parameter range error: x must be >= 0";
-              throw (std::range_error(err));
-            }
-          if (_x > 65535)
-            {
-              std::string err;
-              err += "parameter range error: x must be <= 65535";
-              throw (std::range_error(err));
-            }
-          break;
+      case 'x':
+        _x = atoi (optarg);
+        if (_x < 0)
+          {
+            std::string err;
+            err += "parameter range error: x must be >= 0";
+            throw (std::range_error(err));
+          }
+        if (_x > 65535)
+          {
+            std::string err;
+            err += "parameter range error: x must be <= 65535";
+            throw (std::range_error(err));
+          }
+        break;
 
-        case 'h':
-          _h = true;
-          this->usage (EXIT_SUCCESS);
-          break;
+      case 'h':
+        _h = true;
+        this->usage (EXIT_SUCCESS);
+        break;
 
-        default:
-          this->usage (EXIT_FAILURE);
+      default:
+        this->usage (EXIT_FAILURE);
 
-        }
+      }
     } /* while */
 
   _optind = optind;

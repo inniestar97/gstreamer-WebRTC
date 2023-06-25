@@ -12,8 +12,12 @@
 #include "rtc/rtc.hpp"
 
 #include "parse_cl.h"
+#include "play_video.h"
 
 #include <nlohmann/json.hpp>
+
+#include <thread>
+
 
 // using namespace std;
 using std::shared_ptr;
@@ -25,6 +29,7 @@ weak_ptr<T> make_weak_ptr(shared_ptr<T> ptr) { return ptr; }
 using nlohmann::json;
 
 std::string localId;
+
 std::unordered_map<std::string, shared_ptr<rtc::PeerConnection>> peerConnectionMap;
 std::unordered_map<std::string, shared_ptr<rtc::DataChannel>> dataChannelMap;
 
@@ -35,8 +40,10 @@ shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration &c
 int main(int argc, char *argv[]) try {
     Cmdline params(argc, argv);
 
-    rtc::InitLogger(rtc::LogLevel::Info);
+    /* --- SET LOG & LOG LEVEL --- */
+    // rtc::InitLogger(rtc::LogLevel::Info);
 
+    /* -------------------- START configuration -------------------- */
     rtc::Configuration config;
     std::string stunServer = "";
     if (params.noStun()) {
@@ -56,8 +63,15 @@ int main(int argc, char *argv[]) try {
         std::cout << "ICE UDP mux enabled" << std::endl;
         config.enableIceUdpMux = true;
     }
+    /* --------------------- END configuration --------------------- */
 
-    localId = "videoStreamSender";
+    gst_init(&argc, &argv); // init gstreamer
+    PlayVideo video_middle("/dev/video0");
+
+    std::thread streamThread(&PlayVideo::play, &video_middle);
+    streamThread.detach();
+
+    localId = "CARNIVAL";
 
     shared_ptr<rtc::WebSocket> ws = std::make_shared<rtc::WebSocket>();
 
@@ -78,7 +92,7 @@ int main(int argc, char *argv[]) try {
 
     ws->onClosed([]() { std::cout << "WebSocket closed" << std::endl; });
 
-    ws->onMessage([&config, wws = make_weak_ptr(ws)](auto data) {
+    ws->onMessage([&config, wws = make_weak_ptr(ws), &video_middle](auto data) {
         /* Check whether if data is string
             If data is not string, return  */
         if (!std::holds_alternative<std::string>(data)) 
@@ -100,6 +114,7 @@ int main(int argc, char *argv[]) try {
         auto type = it->get<std::string>();
 
         shared_ptr<rtc::PeerConnection> pc;
+
         if (auto jt = peerConnectionMap.find(id); jt != peerConnectionMap.end()) {
             /*
                 TODO
@@ -114,6 +129,9 @@ int main(int argc, char *argv[]) try {
             */
             std::cout << "Answering to " + id << std::endl;
             pc = createPeerConnection(config, wws, id);
+
+            // send video media to pc
+            video_middle.setVideoMediaTrack(pc);
         } else {
             return;
         }
@@ -126,7 +144,7 @@ int main(int argc, char *argv[]) try {
             std::string mid = message["mid"].get<std::string>();
             pc->addRemoteCandidate(rtc::Candidate(sdp, mid));
         }
-
+            
     });
 
     /*
@@ -168,7 +186,7 @@ int main(int argc, char *argv[]) try {
         std::cout << "Offering to " + remoteId << std::endl;
         shared_ptr<rtc::PeerConnection> pc = createPeerConnection(config, ws, remoteId);
 
-		// We are the offerer, so create a data channel to initiate the process
+        // We are the offerer, so create a data channel to initiate the process
         const std::string label = "This is the gstreamer react test";
         std::cout << "Create DataChannel with label \"" << label << "\"" << std::endl;
         shared_ptr<rtc::DataChannel> dc = pc->createDataChannel(label);
@@ -182,13 +200,13 @@ int main(int argc, char *argv[]) try {
         dc->onClosed([remoteId]() { std::cout << "DataChannel from " << remoteId << " closed" << std::endl; });
 
         dc->onMessage([remoteId, wdc = make_weak_ptr(dc)](auto data) {
-			// data holds either std::string or rtc::binary
-			if (std::holds_alternative<std::string>(data))
-				std::cout << "Message from " << remoteId << " received: " << std::get<std::string>(data)
-				          << std::endl;
-			else
-				std::cout << "Binary message from " << remoteId
-				          << " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
+            // data holds either std::string or rtc::binary
+            if (std::holds_alternative<std::string>(data))
+                std::cout << "Message from " << remoteId << " received: " << std::get<std::string>(data)
+                          << std::endl;
+            else
+                std::cout << "Binary message from " << remoteId
+                          << " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
         });
 
         /* Hold and register dataChannel Connection member */
@@ -199,6 +217,7 @@ int main(int argc, char *argv[]) try {
 
     dataChannelMap.clear();
     peerConnectionMap.clear();
+
     return 0;
 
 } catch (const std::exception &e) {
@@ -208,10 +227,19 @@ int main(int argc, char *argv[]) try {
     return -1;
 }
 
+/**
+ * @brief Create a Peer Connection object based on config (with WebSocket)
+ *         
+ * @param config 
+ * @param wws 
+ * @param id 
+ * @return shared_ptr<rtc::PeerConnection> 
+ */
 shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration &config,
                                                      weak_ptr<rtc::WebSocket> wws,
                                                      std::string id) {
-    auto pc = std::make_shared<rtc::PeerConnection>(config);
+    shared_ptr<rtc::PeerConnection> pc
+        = std::make_shared<rtc::PeerConnection>(config);
 
     pc->onStateChange([](rtc::PeerConnection::State state) {
         std::cout << "State: " << state << std::endl;
@@ -232,15 +260,32 @@ shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration &c
         }
     });
 
-    // pc->onDataChannel([id](shared_ptr<rtc::DataChannel> dc) {
-    //     std::cout <<
-    //         "DataChannel from" << id << " received with label \"" <<
-    //         dc->label() << "\"" << std::endl;
+    pc->onDataChannel([id](shared_ptr<rtc::DataChannel> dc) {
+        std::cout << "DataChannel from" << id << " received with label \"" 
+                  << dc->label() << "\"" << std::endl;
 
-    //     dc->onOpen()
-    // });
+        dc->onOpen([wdc = make_weak_ptr(dc)]() {
+            if (auto dataChannelPtr = wdc.lock())
+                dataChannelPtr->send("Hello from " + localId);
+        });
 
+        dc->onClosed([id]() { std::cout << "DataChannel from " + id + "closed" << std::endl; });
 
-    
+        dc->onMessage([id](auto data) {
+            // data holds either std::string or rtc::binary
+            if (std::holds_alternative<std::string>(data))
+            if (std::holds_alternative<std::string>(data))
+                std::cout << "Message from " << id << " received: " << std::get<std::string>(data)
+                          << std::endl;
+            else
+                std::cout << "Binary message from " << id 
+                          << " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
+        });
 
+        dataChannelMap.emplace(id, dc);
+    });
+
+    peerConnectionMap.emplace(id, pc);
+
+    return pc;
 }
