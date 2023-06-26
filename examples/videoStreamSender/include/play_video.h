@@ -20,8 +20,6 @@
 
 using std::shared_ptr;
 
-static const rtc::SSRC ssrc = 42; // about h246 codec
-
 class PlayVideo
 {
 private:
@@ -38,10 +36,12 @@ private:
   std::string video_device;
   int width, height;
 
-  shared_ptr<rtc::Track> videoTrack;
+  static constexpr rtc::SSRC ssrc = 42; // about h246 codec
 
-  static GstFlowReturn sinkCallback(GstElement *sink,
-                                    shared_ptr<rtc::Track> *videoTrack);
+  static shared_ptr<rtc::Track> videoTrack;
+  static std::shared_mutex videoTrackMx;
+
+  static GstFlowReturn sinkCallback(GstElement *sink);
 
 public:
     PlayVideo(); // default computer(Laptop) WebCam ex) Linux-/dev/video0
@@ -51,7 +51,7 @@ public:
 
     int play(); // Must run as thread
 
-    void setVideoMediaTrack(shared_ptr<rtc::PeerConnection> pc);
+    void addVideoMideaTrackOnPeerConnection(shared_ptr<rtc::PeerConnection> pc);
 };
 
 #endif

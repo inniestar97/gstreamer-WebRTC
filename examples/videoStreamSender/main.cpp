@@ -43,7 +43,9 @@ int main(int argc, char *argv[]) try {
     /* --- SET LOG & LOG LEVEL --- */
     // rtc::InitLogger(rtc::LogLevel::Info);
 
+    /* ------------------------------------------------------------- */
     /* -------------------- START configuration -------------------- */
+    /* ------------------------------------------------------------- */
     rtc::Configuration config;
     std::string stunServer = "";
     if (params.noStun()) {
@@ -63,17 +65,26 @@ int main(int argc, char *argv[]) try {
         std::cout << "ICE UDP mux enabled" << std::endl;
         config.enableIceUdpMux = true;
     }
+    /* ------------------------------------------------------------- */
     /* --------------------- END configuration --------------------- */
+    /* ------------------------------------------------------------- */
 
     gst_init(&argc, &argv); // init gstreamer
+
     PlayVideo video_middle("/dev/video0");
+    // PlayVideo video_middle("/dev/video0");
+    // PlayVideo video_middle("/dev/video0");
 
-    std::thread streamThread(&PlayVideo::play, &video_middle);
-    streamThread.detach();
+    std::thread videoStreamThread_1(&PlayVideo::play, &video_middle);
+    // std::thread videoStreamThread_2(&PlayVideo::play, &video_middle);
+    // std::thread videoStreamThread_3(&PlayVideo::play, &video_middle);
+    videoStreamThread_1.detach();
+    // videoStreamThread_2.detach();
+    // videoStreamThread_3.detach();
 
-    localId = "CARNIVAL";
+    localId = "CARNIVAL"; // Temporary local Id : CARNIVAL - can change if you want
 
-    shared_ptr<rtc::WebSocket> ws = std::make_shared<rtc::WebSocket>();
+    shared_ptr<rtc::WebSocket> ws = std::make_shared<rtc::WebSocket>(); // WebSocket to message signaling server
 
     // Wait until webSocket created
     std::promise<void> wsPromise;
@@ -129,9 +140,6 @@ int main(int argc, char *argv[]) try {
             */
             std::cout << "Answering to " + id << std::endl;
             pc = createPeerConnection(config, wws, id);
-
-            // send video media to pc
-            video_middle.setVideoMediaTrack(pc);
         } else {
             return;
         }
