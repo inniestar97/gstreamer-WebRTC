@@ -17,8 +17,8 @@
 #define TARGET_IP  "127.0.0.1"
 #define TARGET_PORT 5000
 
-#define WIDTH   1240
-#define HEIGHT  1080
+#define WIDTH   3820
+#define HEIGHT  2160
 
 static std::chrono::high_resolution_clock::time_point store_time;
 int data_size = 0;
@@ -39,29 +39,24 @@ GstFlowReturn appsinkCallback(GstElement *sink) {
   std::copy(map.data, map.data + map.size, std::back_inserter(msgToOther));
   gst_buffer_unmap(buffer, &map);
 
-  /* ---------- START send msgToOther using socket ----------- */
-  /* implement in here */
-  // ::send(*client_fd, reinterpret_cast<const char*>(msgToOther.data()), msgToOther.size(), 0);
 
-  
-
-  /* ----------- END send msgToOther using socket ------------ */
-
+#ifdef DEBUG
   /* --------- START Debugging to print out buffer ---------- */
   /* debugging */
-  // auto data_len = msgToOther.size() > 16 * 10 ? 16 * 10 : msgToOther.size();
-  // std::cout << std::hex;
-  // for (size_t i = 0; i < 16 * 10; i++) {
-  //   std::cout << std::setw(2) << std::setfill('0') << (int) msgToOther[i] << " ";
-  //   if ((i + 1) % 16 == 0) {
-  //     std::cout << std::endl;
-  //   }
-  // }
-  // std::cout << std::dec;
-  // if (msgToOther.size() > 16 * 10) {
-  //   std::cout << "..." << std::endl;
-  // }
+  auto data_len = msgToOther.size() > 16 * 10 ? 16 * 10 : msgToOther.size();
+  std::cout << std::hex;
+  for (size_t i = 0; i < 16 * 10; i++) {
+    std::cout << std::setw(2) << std::setfill('0') << (int) msgToOther[i] << " ";
+    if ((i + 1) % 16 == 0) {
+      std::cout << std::endl;
+    }
+  }
+  std::cout << std::dec;
+  if (msgToOther.size() > 16 * 10) {
+    std::cout << "..." << std::endl;
+  }
   /* ---------- END Debugging to print out buffer ----------- */
+#endif
 
 #ifdef DATA_BENCHMARK
   /* ----------- START Benchmark streamdata BPS ------------- */
@@ -97,7 +92,7 @@ int main(int argc, char **argv) {
   GstBus *bus;
   GstMessage *msg;
   GstStateChangeReturn ret;
-  gboolean terminate;
+  gboolean terminate = FALSE;
 
   pipeline = gst_pipeline_new("main-pipline");
 
@@ -118,6 +113,7 @@ int main(int argc, char **argv) {
     "video/x-raw",
     "width",      G_TYPE_INT,         WIDTH,
     "height",     G_TYPE_INT,         HEIGHT,
+    "framerate",  GST_TYPE_FRACTION,  20, 1,
     NULL
   );
 
