@@ -94,7 +94,7 @@ int PlayVideo::play()
     // g_object_set(udpsink, "host", TARGET_IP, "port", TARGET_PORT, NULL);
     g_object_set(appsink, "emit-signals", TRUE, NULL);
     // g_signal_connect(appsink, "new-sample", G_CALLBACK(appsinkCallback), &client_fd);
-    g_signal_connect(appsink, "new-sample", G_CALLBACK(this->sinkCallback), &videoTrack);
+    g_signal_connect(appsink, "new-sample", G_CALLBACK(this->sinkCallback), NULL);
 
     if (!pipeline || !videosrc || !videoconvert || !videoscale || !rawcaps || !queue ||
         !x264enc || !rtph264pay || !appsink)
@@ -179,8 +179,7 @@ int PlayVideo::play()
  * @param sink 
  * @return GstFlowReturn 
  */
-GstFlowReturn PlayVideo::sinkCallback(GstElement *sink,
-                                      shared_ptr<rtc::Track> *videoTrack)
+GstFlowReturn PlayVideo::sinkCallback(GstElement *sink)
 {
     GstSample *sample;
     g_signal_emit_by_name(sink, "pull-sample", &sample);
@@ -199,25 +198,28 @@ GstFlowReturn PlayVideo::sinkCallback(GstElement *sink,
     gst_buffer_unmap(buffer, &map);
 
     /* ------- START send msgToOther using media sender -------- */
-    auto track = *videoTrack;
+    videoTrackMx.lock_shared();
 #ifdef DEBUG
-    if (track == nullptr) {
+    if (videoTrack == nullptr) {
         std::cout << "track is null" << std::endl;
         return GST_FLOW_OK;
     }
-    if (!track->isOpen()) {
+    if (!videoTrack ->isOpen()) {
         std::cout << "track is not opened" << std::endl;
         return GST_FLOW_OK;
     }
 #endif
-    if (track == nullptr || !track->isOpen()) {
+
+    if (videoTrack == nullptr || !videoTrack->isOpen()) {
         gst_sample_unref(sample);
         return GST_FLOW_OK;
     }
 
     auto rtp = reinterpret_cast<rtc::RtpHeader *>(msgToOther.data());
     rtp->setSsrc(ssrc);
-    track->send(reinterpret_cast<const std::byte *>(buffer), msgToOther.size());
+    videoTrack->send(reinterpret_cast<const std::byte *>(buffer), msgToOther.size());
+
+    videoTrackMx.unlock_shared();
     /* -------- END send msgToOther using media sender --------- */
 
 #ifdef DEBUG
@@ -258,9 +260,11 @@ GstFlowReturn PlayVideo::sinkCallback(GstElement *sink,
     return GST_FLOW_OK;
 }
 
-void PlayVideo::setVideoMediaTrack(shared_ptr<rtc::PeerConnection> pc) {
+void PlayVideo::addVideoMideaTrackOnPeerConnection(shared_ptr<rtc::PeerConnection> pc) {
     rtc::Description::Video media("video", rtc::Description::Direction::SendOnly);
     media.addH264Codec(96);
     media.addSSRC(ssrc, "video-send");
+    videoTrackMx.lock_shared();
     videoTrack = pc->addTrack(media);
+    videoTrackMx.unlock_shared();
 }
