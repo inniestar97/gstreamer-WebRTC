@@ -1,7 +1,5 @@
 #include "play_video.h"
 
-#define DEBUG 1
-
 #ifdef DEBUG
 #include <iostream>
 #include <iomanip>
@@ -26,22 +24,23 @@ PlayVideo::PlayVideo(std::string video_dev, int width, int height)
     std::cout << "PlayVideo is constructed" << std::endl;
 #endif
 
-    pipeline     = nullptr;
-    videosrc     = nullptr;
-    videoconvert = nullptr;
-    videoscale   = nullptr;
-    queue        = nullptr;
-    x264enc      = nullptr;
-    rtph264pay   = nullptr;
-    appsink      = nullptr;
-    rawcaps      = nullptr;
-    h264caps     = nullptr;
-    bus          = nullptr;
-    msg          = nullptr;
-    ret          = (GstStateChangeReturn) NULL;
-    terminate    = FALSE;
+    pipeline         = nullptr;
+    videosrc         = nullptr;
+    videoconvert     = nullptr;
+    videoscale       = nullptr;
+    queue            = nullptr;
+    x264enc          = nullptr;
+    rtph264pay       = nullptr;
+    appsink          = nullptr;
+    rawScaleCaps     = nullptr;
+    rawFramerateCaps = nullptr;
+    h264caps         = nullptr;
+    bus              = nullptr;
+    msg              = nullptr;
+    ret              = (GstStateChangeReturn) NULL;
+    terminate        = FALSE;
 
-    track.videoTrack   = nullptr;
+    track.videoTrack = nullptr;
 }
 
 PlayVideo::~PlayVideo() {
@@ -71,14 +70,21 @@ int PlayVideo::play()
 #endif
     videoconvert = gst_element_factory_make("videoconvert", "videoconvert");
     videoscale = gst_element_factory_make("videoscale", "videoscale");
+    videorate = gst_element_factory_make("videorate", "videorate");
     queue = gst_element_factory_make("queue", "queue");
     x264enc = gst_element_factory_make("x264enc", "x264enc");
     g_object_set(x264enc, "tune", /* zerolatency */0x00000004, "bitrate", 1000, "key-int-max", 30, NULL);
 
-    rawcaps = gst_caps_new_simple(
+    rawScaleCaps = gst_caps_new_simple(
         "video/x-raw",
         "width",      G_TYPE_INT,         this->width,
         "height",     G_TYPE_INT,         this->height,
+        NULL
+    );
+
+    rawFramerateCaps = gst_caps_new_simple(
+        "video/x-raw",
+        "framerate", GST_TYPE_FRACTION,  20, 1,
         NULL
     );
 
@@ -96,18 +102,19 @@ int PlayVideo::play()
     // g_signal_connect(appsink, "new-sample", G_CALLBACK(appsinkCallback), &client_fd);
     g_signal_connect(appsink, "new-sample", G_CALLBACK(this->sinkCallback), &track);
 
-    if (!pipeline || !videosrc || !videoconvert || !videoscale || !rawcaps || !queue ||
-        !x264enc || !rtph264pay || !appsink)
+    if (!pipeline || !videosrc || !videoconvert || !videoscale || !rawScaleCaps ||
+        !videorate || !rawFramerateCaps || !queue || !x264enc || !rtph264pay || !appsink)
     {
-
         g_printerr("Not all elements could be created.\n");
         return -1;
     }
 
-    gst_bin_add_many(GST_BIN(pipeline), videosrc, videoconvert, videoscale, queue, x264enc, rtph264pay, appsink, NULL);
+    gst_bin_add_many(GST_BIN(pipeline), videosrc, videoconvert, videoscale,
+                     videorate, queue, x264enc, rtph264pay, appsink, NULL);
 
     if (!gst_element_link_many(videosrc, videoconvert, videoscale, NULL) ||
-        !gst_element_link_filtered(videoscale, queue, rawcaps) ||
+        !gst_element_link_filtered(videoscale, videorate, rawScaleCaps) ||
+        !gst_element_link_filtered(videorate, queue, rawFramerateCaps) ||
         !gst_element_link(queue, x264enc) ||
         !gst_element_link_filtered(x264enc, rtph264pay, h264caps) ||
         !gst_element_link(rtph264pay, appsink))
@@ -116,7 +123,8 @@ int PlayVideo::play()
         return -1;
     }
 
-    gst_caps_unref(rawcaps);
+    gst_caps_unref(rawScaleCaps);
+    gst_caps_unref(rawFramerateCaps);
     gst_caps_unref(h264caps);
 
     ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);

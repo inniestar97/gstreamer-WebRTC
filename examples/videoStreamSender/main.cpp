@@ -13,12 +13,11 @@
 
 #include "parse_cl.h"
 #include "play_video.h"
+#include "config.h"
 
 #include <nlohmann/json.hpp>
 
 #include <thread>
-
-
 // using namespace std;
 using std::shared_ptr;
 using std::weak_ptr;
@@ -71,18 +70,23 @@ int main(int argc, char *argv[]) try {
 
     gst_init(&argc, &argv); // init gstreamer
 
-    PlayVideo video_middle("/dev/video0");
-    // PlayVideo video_middle("/dev/video0");
-    // PlayVideo video_middle("/dev/video0");
-
+#ifdef PLAY_VIDEO_NUM /* -------------------------------------- PLAY VIDEO NUM 1 */
+    PlayVideo video_middle(VIDEO1);
     std::thread videoStreamThread_1(&PlayVideo::play, &video_middle);
-    // std::thread videoStreamThread_2(&PlayVideo::play, &video_middle);
-    // std::thread videoStreamThread_3(&PlayVideo::play, &video_middle);
     videoStreamThread_1.detach();
-    // videoStreamThread_2.detach();
-    // videoStreamThread_3.detach();
+#if PLAY_VIDEO_NUM == 2 /* ------------------------------------ PLAY VIDEO NUM 2 */
+    PlayVideo video_middle(VIDEO2);
+    std::thread videoStreamThread_2(&PlayVideo::play, &video_middle);
+    videoStreamThread_2.detach();
+#if PLAY_VIDEO_NUM == 3 /* ------------------------------------ PLAY VIDEO NUM 3 */
+    PlayVideo video_middle(VIDEO3);
+    std::thread videoStreamThread_3(&PlayVideo::play, &video_middle);
+    videoStreamThread_3.detach();
+#endif /* ----------------------------------------------------- PLAY VIDEO NUM 3 */
+#endif /* ----------------------------------------------------- PLAY VIDEO NUM 2 */
+#endif /* ----------------------------------------------------- PLAY VIDEO NUM 1 */
 
-    localId = "CARNIVAL"; // Temporary local Id : CARNIVAL - can change if you want
+    localId = LOCAL_ID; // Temporary local Id : CARNIVAL - can change if you want
 
     shared_ptr<rtc::WebSocket> ws = std::make_shared<rtc::WebSocket>(); // WebSocket to message signaling server
 

@@ -13,6 +13,7 @@
 #ifndef PLAY_VIDEO_H
 #define PLAY_VIDEO_H
 
+#include "config.h"
 #include <rtc/rtc.hpp>
 #include <gst/gst.h>
 #include <string>
@@ -25,9 +26,9 @@ class PlayVideo
 private:
   GstElement *pipeline;
   GstElement *videosrc; // src elements
-  GstElement *videoconvert, *videoscale, *queue, *x264enc, *rtph264pay; // other elements
+  GstElement *videoconvert, *videoscale, *videorate, *queue, *x264enc, *rtph264pay; // other elements
   GstElement *appsink; // sink elements
-  GstCaps *rawcaps, *h264caps;
+  GstCaps *rawScaleCaps, *rawFramerateCaps, *h264caps;
   GstBus *bus;
   GstMessage *msg;
   GstStateChangeReturn ret;
