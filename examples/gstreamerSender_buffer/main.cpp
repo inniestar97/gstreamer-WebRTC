@@ -12,6 +12,8 @@
 #include <TargetConditionals.h>
 #endif
 
+#define DATA_BENCHMARK
+
 #define TARGET_IP  "127.0.0.1"
 #define TARGET_PORT 5000
 
@@ -61,19 +63,21 @@ GstFlowReturn appsinkCallback(GstElement *sink) {
   // }
   /* ---------- END Debugging to print out buffer ----------- */
 
+#ifdef DATA_BENCHMARK
   /* ----------- START Benchmark streamdata BPS ------------- */
-  // std::chrono::high_resolution_clock::time_point cur_time =
-  //   std::chrono::high_resolution_clock::now();
-  // double diff =
-  //   std::chrono::duration_cast<std::chrono::milliseconds>(cur_time - store_time).count();
-  // if (diff > 1000.) {
-  //   std::cout << data_size << "byte/s" << std::endl; 
-  //   data_size = 0;
-  //   store_time = cur_time;
-  // } else {
-  //   data_size += msgToOther.size();
-  // }
+  std::chrono::high_resolution_clock::time_point cur_time =
+    std::chrono::high_resolution_clock::now();
+  double diff =
+    std::chrono::duration_cast<std::chrono::milliseconds>(cur_time - store_time).count();
+  if (diff > 1000.) {
+    std::cout << data_size << "byte/s" << std::endl; 
+    data_size = 0;
+    store_time = cur_time;
+  } else {
+    data_size += msgToOther.size();
+  }
   /* ------------ END Benchmark streamdata BPS -------------- */
+#endif
 
   gst_sample_unref(sample);
 

@@ -38,10 +38,14 @@ private:
 
   static constexpr rtc::SSRC ssrc = 42; // about h246 codec
 
-  static shared_ptr<rtc::Track> videoTrack;
-  static std::shared_mutex videoTrackMx;
+  // static shared_ptr<rtc::Track> videoTrack;
+  // static std::shared_mutex videoTrackMx;
+  struct Track {
+    shared_ptr<rtc::Track> videoTrack;
+    std::shared_mutex videoTrackMx;
+  } track;
 
-  static GstFlowReturn sinkCallback(GstElement *sink);
+  static GstFlowReturn sinkCallback(GstElement *sink, Track *track);
 
 public:
     PlayVideo(); // default computer(Laptop) WebCam ex) Linux-/dev/video0
