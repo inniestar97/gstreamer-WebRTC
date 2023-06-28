@@ -12,34 +12,61 @@ const SIGNALING_SERVER_URL: string = "ws://127.0.0.1:8000"
 
 function App() {
 
-  const [socketConnected, setSocketConnected] = useState(false);
   const [remoteId, setRemoteId] = useState("");
 
-  const ws = useRef<WebSocket | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>();
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (!ws.current) {
-      ws.current = new WebSocket(SIGNALING_SERVER_URL);
-      console.log(ws);
+    if (!wsRef.current) {
+      wsRef.current = new WebSocket(SIGNALING_SERVER_URL);
+      console.log(wsRef);
 
-      ws.current.onopen = () => {
+      wsRef.current.onopen = () => {
         console.log("connected to " + SIGNALING_SERVER_URL);
-        setSocketConnected(true);
       };
       
-      ws.current.onmessage = (msgEvent: MessageEvent) => {
+      wsRef.current.onmessage = (msgEvent: MessageEvent) => {
       }
     }
 
   }, []);
 
-  const buttonOnClick = () => {
-    if (socketConnected && remoteId !== "") {
-      pcRef.current = createPeerConnection(pc_config, ws.current, remoteId);
+  const createOffer = async () => {
+    if (!(pcRef.current && wsRef.current)) return;
+    try {
+      const sdp = await pcRef.current.createOffer({
+        offerToReceiveVideo: true,
+        offerToReceiveAudio: true,
+      });
+      await pcRef.current.setLocalDescription(new RTCSessionDescription(sdp));
+      wsRef.current.send(JSON.stringify({
+        "type": "offer",
+        "sdp": sdp
+      }));
     }
-  }
+  };
+
+  const buttonOnClick = () => {
+    if (!wsRef.current || remoteId === "")  return;
+
+    console.log("Offering to " + remoteId + "...");
+    pcRef.current = createPeerConnection(pc_config, wsRef.current, remoteId);
+
+    /*
+     * In this case, button 'clicker' is Offerer.
+     * So create 'DataChannel' and 'VideoTrack' to initiate the process
+     */
+    const testLabel = "This is the react side label for test";
+    console.log("Create Datachannel and VideoTrack with label '" + testLabel + "'");
+
+
+
+
+
+
+  };
 
   const createPeerConnection = (config: RTCConfiguration, wws: WebSocket | null, id: string): RTCPeerConnection | null => {
 
