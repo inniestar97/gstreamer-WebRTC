@@ -65,9 +65,6 @@ function App() {
       videoRef.current.play();
     }
 
-
-
-
     return pc;
   }
   
