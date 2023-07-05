@@ -143,7 +143,39 @@ int main(int argc, char *argv[]) try {
                 through WebSocket
             */
             std::cout << "Answering to " + id << std::endl;
+            std::cout << "before create peer connection" << std::endl;
             pc = createPeerConnection(config, wws, id);
+            std::cout << "after create peer connection" << std::endl;
+
+            video_middle.addVideoMideaTrackOnPeerConnection(pc);
+
+            pc->setLocalDescription();
+
+            if (!(pc->localDescription().has_value())) {
+                std::cout << "No localdescription" << std::endl;
+                return; 
+            }
+            
+            auto localSdp = pc->localDescription().value();
+            // std::cout << std::string(localSdp) << std::endl;
+
+            json message = {
+                { "id", id },
+                { "type", localSdp.typeString() },
+                { "sdp", std::string(localSdp) }
+            };
+            if (auto webSocketPtr = wws.lock()) {
+                webSocketPtr->send(message.dump());
+            }
+
+            // json message = {
+            //     // { "id", id },
+            //     { "type", description.typeString() },
+            //     { "sdp", std::string(description) }
+            // };
+            // if (auto webSocketPtr = wws.lock()) {
+            //     webSocketPtr->send(message.dump());
+            // }
         } else {
             return;
         }
@@ -265,7 +297,7 @@ shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration &c
         json message = {
             { "id", id },
             { "type", description.typeString() },
-            { "description", std::string(description) }
+            { "sdp", std::string(description) }
         };
         if (auto webSocketPtr = wws.lock()) {
             webSocketPtr->send(message.dump());

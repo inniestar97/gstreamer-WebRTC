@@ -210,23 +210,25 @@ GstFlowReturn PlayVideo::sinkCallback(GstElement *sink, Track *track)
 #ifdef DEBUG
     if (track->videoTrack == nullptr) {
         std::cout << "track is null" << std::endl;
+        track->videoTrackMx.unlock_shared();
         return GST_FLOW_OK;
     }
-    if (!(track->videoTrack ->isOpen())) {
-        std::cout << "track is not opened" << std::endl;
+    if (track->videoTrack ->isClosed()) {
+        std::cout << "track is closed" << std::endl;
+        track->videoTrackMx.unlock_shared();
         return GST_FLOW_OK;
     }
 #endif
 
-    if (track->videoTrack == nullptr || !(track->videoTrack->isOpen())) {
+    if (track->videoTrack == nullptr || track->videoTrack->isClosed()) {
         gst_sample_unref(sample);
+        track->videoTrackMx.unlock_shared();
         return GST_FLOW_OK;
     }
 
     auto rtp = reinterpret_cast<rtc::RtpHeader *>(msgToOther.data());
     rtp->setSsrc(ssrc);
     track->videoTrack->send(reinterpret_cast<const std::byte *>(buffer), msgToOther.size());
-
     track->videoTrackMx.unlock_shared();
     /* -------- END send msgToOther using media sender --------- */
 
@@ -272,7 +274,7 @@ void PlayVideo::addVideoMideaTrackOnPeerConnection(shared_ptr<rtc::PeerConnectio
     rtc::Description::Video media("video", rtc::Description::Direction::SendOnly);
     media.addH264Codec(96);
     media.addSSRC(ssrc, "video-send");
-    track.videoTrackMx.lock_shared();
+    track.videoTrackMx.lock();
     track.videoTrack = pc->addTrack(media);
-    track.videoTrackMx.unlock_shared();
+    track.videoTrackMx.unlock();
 }

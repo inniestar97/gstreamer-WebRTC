@@ -1,6 +1,6 @@
 /* Basic setting */
 #define LOCAL_ID "andromeda"
-#define DEBUG 1
+// #define DEBUG 1
 
 /* video setting */
 #define PLAY_VIDEO_NUM 1
