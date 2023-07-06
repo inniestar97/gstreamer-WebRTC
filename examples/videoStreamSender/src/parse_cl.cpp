@@ -60,7 +60,11 @@ Cmdline::Cmdline (int argc, char *argv[]) // ISO C++17 not allowed: throw (std::
   _m = false;
   _s = "stun.l.google.com";
   _t = 19302;
+#if __APPLE__
+  _w = "127.0.0.1";
+#else // __linux__
   _w = "localhost";
+#endif
   _x = 8000;
   _h = false;
 

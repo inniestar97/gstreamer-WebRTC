@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) try {
     Cmdline params(argc, argv);
 
     /* --- SET LOG & LOG LEVEL --- */
-    rtc::InitLogger(rtc::LogLevel::Debug);
+    rtc::InitLogger(rtc::LogLevel::Info);
 
     /* ------------------------------------------------------------- */
     /* -------------------- START configuration -------------------- */
@@ -132,35 +132,44 @@ int main(int argc, char *argv[]) try {
 
         if (auto jt = peerConnectionMap.find(id); jt != peerConnectionMap.end()) {
             /*
-                TODO
-                Have to find when enter this section and description specifically
+                if it was already peer connected before.
+                ex) message type is answer or candidate
+                in this case, it is candidate, NOT answer (it is vehicle side).
             */
             pc = jt->second;
         } else if (type == "offer") {
-
             /*
                 If this peer receive peerconnection offering by other peer
                 then create the peerconnection with received "Id"
                 through WebSocket
             */
-
             pc = createPeerConnection(config, wws, id);
 
-            std::string sdp = message["sdp"].get<std::string>();
-            pc->setRemoteDescription(rtc::Description(sdp, type));
+            // std::string sdp = message["sdp"].get<std::string>();
+            // pc->setRemoteDescription(rtc::Description(sdp, type));
 
-            std::cout << "Answering to " + id << std::endl;
+            // std::cout << "Answering to " + id << std::endl;
+
+            // video_middle.addVideoMideaTrackOnPeerConnection(pc);
+
+            // pc->setLocalDescription();
+
+        } else  {
+            return;
+        }
+
+        if (type == "offer") {
+            auto sdp = message["sdp"].get<std::string>();
 
             video_middle.addVideoMideaTrackOnPeerConnection(pc);
 
-            pc->setLocalDescription();
+            pc->setRemoteDescription(rtc::Description(sdp, type));
 
-        } else { // (type == "candidate")
-            // return;
-            std::string sdp = message["candidate"].get<std::string>();
-            std::string mid = message["mid"].get<std::string>();
+        } else if (type == "candidate") {
+            auto sdp = message["candidate"].get<std::string>();
+            auto mid = message["mid"].get<std::string>();
             pc->addRemoteCandidate(rtc::Candidate(sdp, mid));
-        }
+        } // else -> We do not handle.
 
     });
 
@@ -279,6 +288,18 @@ shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration &c
             { "id", id },
             { "type", description.typeString() },
             { "sdp", std::string(description) }
+        };
+        if (auto webSocketPtr = wws.lock()) {
+            webSocketPtr->send(message.dump());
+        }
+    });
+
+    pc->onLocalCandidate([wws, id](rtc::Candidate candidate) {
+        json message = {
+            { "id", id },
+            { "type", "candidate" },
+            { "candidate", std::string(candidate) },
+            { "mid", candidate.mid() }
         };
         if (auto webSocketPtr = wws.lock()) {
             webSocketPtr->send(message.dump());

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 
 const pc_config: RTCConfiguration = {
   iceServers: [
@@ -6,136 +6,99 @@ const pc_config: RTCConfiguration = {
       urls: "stun:stun.l.google.com:19302",
     },
   ],
-  bundlePolicy: 'max-bundle',
+  // bundlePolicy: 'max-bundle',
 };
-const SIGNALING_SERVER_URL: string = "ws://127.0.0.1:8000/"
+
+const localId: string = "ADRemote";
+const SIGNALING_SERVER_URL: string = `ws://127.0.0.1:8000/${localId}`;
 
 function App() {
 
-  const [remoteId, setRemoteId] = useState("andromeda");
-  const [peerConnectionMap, setPeerConnectionMap] = useState({});
-  const [dataChannelMap, setDataChannelMap] = useState({});
+  const [remoteId, setRemoteId] = useState<string>('andromeda');
+  const [peerConnectionMap, setPeerConnectionMap] = useState<any>({}); // dictionary
+  const [dataChannelMap, setDataChannelMap] = useState<any>({}); // dictionary
 
   const wsRef = useRef<WebSocket>();
-  const pcRef = useRef<RTCPeerConnection>();
-  const dcRef = useRef<RTCDataChannel>();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  // const pcRef = useRef<RTCPeerConnection>();
+  // const dcRef = useRef<RTCDataChannel>();
 
   useEffect(() => {
 
+    buttonRef.current!.disabled = true;
+    console.log('Connecting to signaling ...');
+
     // websocket setting
-    openSignaling(SIGNALING_SERVER_URL + "ADRemote");
+    openSignaling(SIGNALING_SERVER_URL)
+      .then((ws) => {
+         console.log('WebSocket connected, siganling ready');
+         buttonRef.current!.disabled = false;
+      })
+      .catch((err) => console.error(err));
 
-    // // websocket setting
-    // wsRef.current = new WebSocket(SIGNALING_SERVER_URL + "ADRemote");
-
-    // // websocket onopen callback
-    // wsRef.current.onopen = (ev: Event) => {
-    //   console.log("connected to " + SIGNALING_SERVER_URL + ", signaling ready.");
-    // };
-
-    // // websocket onerror callback
-    // wsRef.current.onerror = (ev: Event) => {
-    //   console.log("WebSocket error");
-    // };
-
-    // // websocket onclose callback
-    // wsRef.current.onclose = (ev: CloseEvent) => {
-    //   console.log("Websocket Closed");
-    // };
-
-    // // websocket on message callback
-    // wsRef.current.onmessage = (msgEvent: MessageEvent) => {
-    //   if (!pcRef.current) { // peerconnection check
-    //     console.log("Not peerconnection");
-    //     return;
-    //   }
-
-    //   if (typeof msgEvent.data !== "string") { // data type check
-    //     console.log("Websocket onMessage data type is not correct.");
-    //     return;
-    //   } 
-
-    //   const message = JSON.parse(msgEvent.data);
-
-    //   let id = "id" in message ? message.id : () => {
-    //     console.log("There's no 'id' in JSON");
-    //     return;
-    //   };
-    //   let type = "type" in message ? message.type : () => {
-    //     console.log("There's no 'type' in JSON");
-    //     return;
-    //   }
-
-    //   if (type === "answer") {
-    //     // Set remote description
-    //     pcRef.current.setRemoteDescription(
-    //       new RTCSessionDescription(message)
-    //     );
-    //   } else if (type === "candidate") {
-    //     // Add ICE candidate to communicate with others
-    //     pcRef.current.addIceCandidate(
-    //       new RTCIceCandidate(message.candidate)
-    //     );
-    //   }
-    // };
-
-    // return () => { // run before start useEffect
-    //   if (wsRef.current) {
-    //     console.log("Websocket not null")
-    //     wsRef.current.close();
-    //   }
-    //   if (pcRef.current) {
-    //     pcRef.current.close();
-    //   }
-    // }
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    }
 
   }, []);
 
-  const openSignaling = async (url: string) => {
-    try {
-      return await new Promise((resolve, reject) => {
-        wsRef.current = new WebSocket(url);
-        console.log("WebSocket Created");
-        wsRef.current.onopen = () => resolve(wsRef.current);
-        wsRef.current.onerror = () => reject(new Error('WebSocket error'));
-        wsRef.current.onclose = () => console.error('WebSocket disconnected');
+  const openSignaling = (url: string) => {
+    return new Promise((resolve, reject) => {
+      wsRef.current = new WebSocket(url);
+      wsRef.current.onopen = () => resolve(wsRef.current);
+      wsRef.current.onerror = () => reject(new Error('WebSocket error'));
+      wsRef.current.onclose = () => console.error('WebSocket disconnected');
 
-        wsRef.current.onmessage = (msgEvent: MessageEvent) => {
-          if (typeof msgEvent.data != 'string') return;
+      wsRef.current.onmessage = (msgEvent: MessageEvent) => {
+        if (typeof msgEvent.data != 'string') return;
 
-          const message = JSON.parse(msgEvent.data);
-          console.log(message);
-          const { id, type } = message;
+        const message = JSON.parse(msgEvent.data);
+        console.log(message);
+        const { id, type } = message;
 
-          let pc = createPeerConnection(wsRef.current!, id);
+        console.log(peerConnectionMap);
+        let pc = peerConnectionMap[id] as RTCPeerConnection;
+        if (!pc) {
+          console.log(`There's no ${id} before.`);
+
+          if (type != 'offer')
+            return;
+
+          console.log(`Answering to ${id}`);
+          pc = createPeerConnection(wsRef.current!, id);
+        }
           
-          switch (type) { 
-            case 'answer':
-              pc.setRemoteDescription({
-                sdp: message.sdp,
-                type: message.type 
-              });
-              break;
+        switch (type) { 
+          case 'offer':
+          case 'answer':
+            pc.setRemoteDescription({
+              sdp : message.sdp,
+              type : message.type 
+            });
+            if (type == 'offer') {
+              // send answer
+              sendLocalDescription(wsRef.current!, id, pc, 'answer');
+            }
+            break;
 
-            case 'candidate':
-              pc.addIceCandidate({
-                candidate: message.candidate,
-                sdpMid: message.mid
-              });
-              break;
+          case 'candidate':
+            pc.addIceCandidate({
+              candidate : message.candidate,
+              sdpMid : message.mid
+            });
+            break;
 
-            default:
-              break;
-          }
+          default: // We are not handle this section
+            break;
+        }
           
-        };
+      };
 
-      });
-    } catch (err) {
-      return console.error(err);
-    }
-  }
+    });
+  };
 
   const createPeerConnection = (ws: WebSocket, id: string) => {
     const pc = new RTCPeerConnection(pc_config);
@@ -145,15 +108,7 @@ function App() {
     pc.onicecandidate = (evt: RTCPeerConnectionIceEvent) => {
       if (evt.candidate && evt.candidate.candidate) {
         // Send candidate
-        const { candidate, sdpMid } = evt.candidate;
-        ws.send(JSON.stringify(
-          {
-            id,
-            type: 'candidate',
-            candidate,
-            mid: sdpMid
-          }
-        ));
+        sendLocalCandidate(wsRef.current!, id, evt.candidate);
       }
     }
 
@@ -165,13 +120,27 @@ function App() {
       dc.send(`Hello from ADRemote`);
     };
 
+    // pc.ontrack = (evt: RTCTrackEvent) => {
+    //   if (!videoRef.current) {
+    //     console.log(' video Ref is null ');
+    //     return;
+    //   }
+    //   videoRef.current.srcObject = evt.streams[0];
+    //   videoRef.current.play();
+    // }
+
+    // setPeerConnectionMap((prev) => new Map(prev).set(id, pc));
+    // console.log({ id: pc });
+    // setPeerConnectionMap({ ...peerConnectionMap, ...{ id: pc } });
+    setPeerConnectionMap((peerConnectionMap[id] = pc));
+
     return pc;
   }
 
   const buttonOnClick = async () => {
 
     console.log(`Offering to ${remoteId}`);
-    const pc = createPeerConnection(wsRef.current!, remoteId);
+    let pc = createPeerConnection(wsRef.current!, remoteId);
 
     // Create DataChannel
     const label = "TEST peer connection";
@@ -179,59 +148,8 @@ function App() {
     const dc = pc.createDataChannel(label);
     setupDataChannel(dc, remoteId);
 
+    // Send offer
     sendLocalDescription(wsRef.current!, remoteId, pc, 'offer');
-    // if (!wsRef.current || remoteId === "")  return;
-
-    // console.log("Offering to " + remoteId + "...");
-
-    // // create peer connection
-    // pcRef.current = new RTCPeerConnection(pc_config);
-    // if (!pcRef.current || pcRef.current == undefined) {
-    //   console.log("PeerConnection is not constructed");
-    //   return;
-    // }
-    
-    // pcRef.current.oniceconnectionstatechange = (ev: Event) => {
-    //   console.log("State: " + pcRef.current?.iceConnectionState);
-    // };
-
-    // pcRef.current.onicegatheringstatechange = (ev: Event) => {
-    //   console.log("Gathering state: " + pcRef.current?.iceGatheringState);
-    // };
-
-    // pcRef.current.onsignalingstatechange = (ev: Event) => {
-    //   console.log("signaling state: " + pcRef.current?.signalingState);
-    // };
-
-    // pcRef.current.ontrack = (evt: RTCTrackEvent) => {
-    //   if (!videoRef.current) return;
-    //   videoRef.current.srcObject = evt.streams[0];
-    //   videoRef.current.play();
-    // }
-
-    // // // DataChannel Event
-    // const label = "Test from ADRemote";
-    // console.log(`Creating DataChannel with label ${label}`);
-    // dcRef.current = pcRef.current.createDataChannel(label);
-
-    // const sdp = await pcRef.current.createOffer(
-    //   {
-    //     offerToReceiveVideo: true
-    //   }
-    // );
-    // console.log(sdp);
-    // await pcRef.current.setLocalDescription(new RTCSessionDescription(sdp));
-    // if (!wsRef.current) {
-    //   console.log("Websocket is not constructed");
-    //   return;
-    // }
-    // wsRef.current.send(JSON.stringify(
-    //   {
-    //     "type": sdp.type,
-    //     "sdp": sdp.sdp,
-    //     "id": remoteId
-    //   }
-    // ));
 
   };
 
@@ -248,10 +166,13 @@ function App() {
       console.log(`Message from ${id} received: ${evt.data}`);
     }
 
+    setDataChannelMap((dataChannelMap[id] = dc));
+
     return dc;
-  }
+  };
 
   const sendLocalDescription = (ws: WebSocket, id: string, pc: RTCPeerConnection, type: string) => {
+    // (type == 'offer' ? pc.createOffer({ offerToReceiveVideo: true }) : pc.createAnswer())
     (type == 'offer' ? pc.createOffer() : pc.createAnswer())
       .then((desc) => pc.setLocalDescription(desc))
       .then(() => {
@@ -260,17 +181,31 @@ function App() {
           {
             id,
             type,
-            sdp: sdp
+            sdp : sdp
           }
         ));
       });
-  }
+  };
+
+  const sendLocalCandidate = (ws: WebSocket, id: string, cand: RTCIceCandidate) => {
+    const { candidate, sdpMid } = cand;
+    ws.send(JSON.stringify(
+      {
+        id,
+        type : 'candidate',
+        candidate,
+        mid : sdpMid
+      }
+    ))
+
+  };
 
   return (
     <div className="App">
       <header className="App-header">
-        <input type='text' value={ remoteId } onChange={ (e) => { setRemoteId(e.target.value); } } />
-        <button onClick={ buttonOnClick }>Connect!</button>
+        <input type='text'value={ remoteId } onChange={ (e) => { setRemoteId(e.target.value); } }/>
+        {/* <button onClick={ buttonOnClick }>Connect!</button> */}
+        <button ref={ buttonRef } onClick={ buttonOnClick }>Connect!</button>
       </header>
       <video ref={ videoRef } muted></video>
     </div>

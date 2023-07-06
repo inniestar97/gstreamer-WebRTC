@@ -232,22 +232,22 @@ GstFlowReturn PlayVideo::sinkCallback(GstElement *sink, Track *track)
     track->videoTrackMx.unlock_shared();
     /* -------- END send msgToOther using media sender --------- */
 
-#ifdef DEBUG
-    /* --------- START Debugging to print out buffer ---------- */
-    auto data_len = msgToOther.size() > 16 * 10 ? 16 * 10 : msgToOther.size();
-    std::cout << std::hex;
-    for (size_t i = 0; i < 16 * 10; i++) {
-        std::cout << std::setw(2) << std::setfill('0') << (int) msgToOther[i] << " ";
-        if ((i + 1) % 16 == 0) {
-            std::cout << std::endl;
-        }
-    }
-    std::cout << std::dec;
-    if (msgToOther.size() > 16 * 10) {
-        std::cout << "..." << std::endl;
-    }
-    /* ---------- END Debugging to print out buffer ----------- */
-#endif
+// #ifdef DEBUG
+//     /* --------- START Debugging to print out buffer ---------- */
+//     auto data_len = msgToOther.size() > 16 * 10 ? 16 * 10 : msgToOther.size();
+//     std::cout << std::hex;
+//     for (size_t i = 0; i < 16 * 10; i++) {
+//         std::cout << std::setw(2) << std::setfill('0') << (int) msgToOther[i] << " ";
+//         if ((i + 1) % 16 == 0) {
+//             std::cout << std::endl;
+//         }
+//     }
+//     std::cout << std::dec;
+//     if (msgToOther.size() > 16 * 10) {
+//         std::cout << "..." << std::endl;
+//     }
+//     /* ---------- END Debugging to print out buffer ----------- */
+// #endif
 
 #ifdef DATA_BENCHMARK
     /* ----------- START Benchmark streamdata BPS ------------- */
