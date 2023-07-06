@@ -21,6 +21,9 @@
 
 using std::shared_ptr;
 
+extern bool connected;
+extern std::shared_mutex connMx;
+
 class PlayVideo
 {
 private:
@@ -39,24 +42,20 @@ private:
 
   static constexpr rtc::SSRC ssrc = 42; // about h246 codec
 
-  // static shared_ptr<rtc::Track> videoTrack;
-  // static std::shared_mutex videoTrackMx;
-  struct Track {
-    shared_ptr<rtc::Track> videoTrack;
-    std::shared_mutex videoTrackMx;
-  } track;
+  shared_ptr<rtc::Track> videoTrack;
 
-  static GstFlowReturn sinkCallback(GstElement *sink, Track *track);
+  static GstFlowReturn sinkCallback(GstElement *sink, shared_ptr<rtc::Track> *track);
 
 public:
-    PlayVideo(); // default computer(Laptop) WebCam ex) Linux-/dev/video0
-    PlayVideo(std::string video_dev);
-    PlayVideo(std::string video_dev, int width, int height);
-    ~PlayVideo();
+  PlayVideo(); // default computer(Laptop) WebCam ex) Linux-/dev/video0
+  PlayVideo(std::string video_dev);
+  PlayVideo(std::string video_dev, int width, int height);
+  ~PlayVideo();
 
-    int play(); // Must run as thread
+  int play(); // Must run as thread
 
-    void addVideoMideaTrackOnPeerConnection(shared_ptr<rtc::PeerConnection> pc);
+  void addVideoMideaTrackOnPeerConnection(shared_ptr<rtc::PeerConnection> pc);
+
 };
 
 #endif

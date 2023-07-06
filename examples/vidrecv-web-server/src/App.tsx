@@ -59,7 +59,6 @@ function App() {
         console.log(message);
         const { id, type } = message;
 
-        console.log(peerConnectionMap);
         let pc = peerConnectionMap[id] as RTCPeerConnection;
         if (!pc) {
           console.log(`There's no ${id} before.`);
@@ -72,7 +71,7 @@ function App() {
         }
           
         switch (type) { 
-          case 'offer':
+          case 'offer': // Maybe, we are not gonna get 'offer' description
           case 'answer':
             pc.setRemoteDescription({
               sdp : message.sdp,
@@ -120,18 +119,16 @@ function App() {
       dc.send(`Hello from ADRemote`);
     };
 
-    // pc.ontrack = (evt: RTCTrackEvent) => {
-    //   if (!videoRef.current) {
-    //     console.log(' video Ref is null ');
-    //     return;
-    //   }
-    //   videoRef.current.srcObject = evt.streams[0];
-    //   videoRef.current.play();
-    // }
+    pc.ontrack = (evt: RTCTrackEvent) => {
+      console.log("on Track is called");
+      if (!videoRef.current) {
+        console.log(' video Ref is null ');
+        return;
+      }
+      videoRef.current.srcObject = evt.streams[0];
+      // videoRef.current.play();
+    }
 
-    // setPeerConnectionMap((prev) => new Map(prev).set(id, pc));
-    // console.log({ id: pc });
-    // setPeerConnectionMap({ ...peerConnectionMap, ...{ id: pc } });
     setPeerConnectionMap((peerConnectionMap[id] = pc));
 
     return pc;
@@ -172,8 +169,7 @@ function App() {
   };
 
   const sendLocalDescription = (ws: WebSocket, id: string, pc: RTCPeerConnection, type: string) => {
-    // (type == 'offer' ? pc.createOffer({ offerToReceiveVideo: true }) : pc.createAnswer())
-    (type == 'offer' ? pc.createOffer() : pc.createAnswer())
+    (type == 'offer' ? pc.createOffer({ offerToReceiveVideo: true }) : pc.createAnswer())
       .then((desc) => pc.setLocalDescription(desc))
       .then(() => {
         const { sdp, type } = pc.localDescription!;
@@ -204,13 +200,22 @@ function App() {
     <div className="App">
       <header className="App-header">
         <input type='text'value={ remoteId } onChange={ (e) => { setRemoteId(e.target.value); } }/>
-        {/* <button onClick={ buttonOnClick }>Connect!</button> */}
         <button ref={ buttonRef } onClick={ buttonOnClick }>Connect!</button>
       </header>
-      <video ref={ videoRef } muted></video>
+      <video
+        ref={ videoRef }
+        style={
+          {
+            width: 720,
+            height: 480,
+            margin: 5,
+            backgroundColor: "black",
+          }
+        }
+        autoPlay
+      />
     </div>
   );
-
 
 }
 

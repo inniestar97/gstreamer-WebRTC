@@ -281,6 +281,11 @@ shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration &c
 
     pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state) {
         std::cout << "Gathering State: " << state << std::endl;
+        if (state == rtc::PeerConnection::GatheringState::Complete) {
+            connMx.lock();
+            connected = true;
+            connMx.unlock();
+        }
     });
 
     pc->onLocalDescription([wws, id](rtc::Description description) {

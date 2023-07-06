@@ -1,6 +1,6 @@
 #include "play_video.h"
 
-#ifdef DEBUG
+#if DEBUG
 #include <iostream>
 #include <iomanip>
 #endif
@@ -11,6 +11,9 @@
 int data_size;
 #endif
 
+bool connected = false;
+std::shared_mutex connMx;
+
 PlayVideo::PlayVideo()
     : PlayVideo("/dev/video0") {}
 
@@ -20,7 +23,7 @@ PlayVideo::PlayVideo(std::string video_dev)
 PlayVideo::PlayVideo(std::string video_dev, int width, int height)
     : video_device(video_dev), width(width), height(height)
 {
-#ifdef DEBUG
+#if DEBUG
     std::cout << "PlayVideo is constructed" << std::endl;
 #endif
 
@@ -40,11 +43,11 @@ PlayVideo::PlayVideo(std::string video_dev, int width, int height)
     ret              = (GstStateChangeReturn) NULL;
     terminate        = FALSE;
 
-    track.videoTrack = nullptr;
+    videoTrack = nullptr;
 }
 
 PlayVideo::~PlayVideo() {
-#ifdef DEBUG
+#if DEBUG
     std::cout << "PlayVideo is destructed" << std::endl;
 #endif
 
@@ -56,7 +59,7 @@ PlayVideo::~PlayVideo() {
  */
 int PlayVideo::play()
 {
-#ifdef DEBUG
+#if DEBUG
     std::cout << "PlayVideo video play!!!" << std::endl;
 #endif
 
@@ -100,7 +103,7 @@ int PlayVideo::play()
     // g_object_set(udpsink, "host", TARGET_IP, "port", TARGET_PORT, NULL);
     g_object_set(appsink, "emit-signals", TRUE, NULL);
     // g_signal_connect(appsink, "new-sample", G_CALLBACK(appsinkCallback), &client_fd);
-    g_signal_connect(appsink, "new-sample", G_CALLBACK(this->sinkCallback), &track);
+    g_signal_connect(appsink, "new-sample", G_CALLBACK(this->sinkCallback), &videoTrack);
 
     if (!pipeline || !videosrc || !videoconvert || !videoscale || !rawScaleCaps ||
         !videorate || !rawFramerateCaps || !queue || !x264enc || !rtph264pay || !appsink)
@@ -187,8 +190,36 @@ int PlayVideo::play()
  * @param sink 
  * @return GstFlowReturn 
  */
-GstFlowReturn PlayVideo::sinkCallback(GstElement *sink, Track *track)
+GstFlowReturn PlayVideo::sinkCallback(GstElement *sink, shared_ptr<rtc::Track> *track)
 {
+    connMx.lock_shared();
+    if (!connected) {
+        connMx.unlock_shared();
+        return GST_FLOW_OK;
+    }
+    connMx.unlock_shared();
+
+    auto _track = *track;
+
+    // track->videoTrackMx.lock_shared();
+#if DEBUG
+    if (track->videoTrack == nullptr) {
+        std::cout << "track is null" << std::endl;
+        track->videoTrackMx.unlock_shared();
+        return GST_FLOW_OK;
+    }
+    if (track->videoTrack->isClosed()) {
+        std::cout << "track is closed" << std::endl;
+        track->videoTrackMx.unlock_shared();
+        return GST_FLOW_OK;
+    }
+#endif
+    if (_track == nullptr || _track->isClosed()) {
+        // track->videoTrackMx.unlock_shared();
+        return GST_FLOW_OK;
+    }
+    // track->videoTrackMx.unlock_shared();
+
     GstSample *sample;
     g_signal_emit_by_name(sink, "pull-sample", &sample);
 
@@ -206,48 +237,34 @@ GstFlowReturn PlayVideo::sinkCallback(GstElement *sink, Track *track)
     gst_buffer_unmap(buffer, &map);
 
     /* ------- START send msgToOther using media sender -------- */
-    track->videoTrackMx.lock_shared();
-#ifdef DEBUG
-    if (track->videoTrack == nullptr) {
-        std::cout << "track is null" << std::endl;
-        track->videoTrackMx.unlock_shared();
-        return GST_FLOW_OK;
-    }
-    if (track->videoTrack ->isClosed()) {
-        std::cout << "track is closed" << std::endl;
-        track->videoTrackMx.unlock_shared();
-        return GST_FLOW_OK;
-    }
-#endif
 
-    if (track->videoTrack == nullptr || track->videoTrack->isClosed()) {
+    if (msgToOther.size() < sizeof(rtc::RtpHeader)) {
+        std::cout << "Message size is smaller than RTP header size" << std::endl;
         gst_sample_unref(sample);
-        track->videoTrackMx.unlock_shared();
         return GST_FLOW_OK;
     }
 
     auto rtp = reinterpret_cast<rtc::RtpHeader *>(msgToOther.data());
     rtp->setSsrc(ssrc);
-    track->videoTrack->send(reinterpret_cast<const std::byte *>(buffer), msgToOther.size());
-    track->videoTrackMx.unlock_shared();
+    _track->send(reinterpret_cast<const std::byte *>(msgToOther.data()), msgToOther.size());
     /* -------- END send msgToOther using media sender --------- */
 
-// #ifdef DEBUG
-//     /* --------- START Debugging to print out buffer ---------- */
-//     auto data_len = msgToOther.size() > 16 * 10 ? 16 * 10 : msgToOther.size();
-//     std::cout << std::hex;
-//     for (size_t i = 0; i < 16 * 10; i++) {
-//         std::cout << std::setw(2) << std::setfill('0') << (int) msgToOther[i] << " ";
-//         if ((i + 1) % 16 == 0) {
-//             std::cout << std::endl;
-//         }
-//     }
-//     std::cout << std::dec;
-//     if (msgToOther.size() > 16 * 10) {
-//         std::cout << "..." << std::endl;
-//     }
-//     /* ---------- END Debugging to print out buffer ----------- */
-// #endif
+#if DEBUG
+    /* --------- START Debugging to print out buffer ---------- */
+    auto data_len = msgToOther.size() > 16 * 10 ? 16 * 10 : msgToOther.size();
+    std::cout << std::hex;
+    for (size_t i = 0; i < 16 * 10; i++) {
+        std::cout << std::setw(2) << std::setfill('0') << (int) msgToOther[i] << " ";
+        if ((i + 1) % 16 == 0) {
+            std::cout << std::endl;
+        }
+    }
+    std::cout << std::dec;
+    if (msgToOther.size() > 16 * 10) {
+        std::cout << "..." << std::endl;
+    }
+    /* ---------- END Debugging to print out buffer ----------- */
+#endif
 
 #ifdef DATA_BENCHMARK
     /* ----------- START Benchmark streamdata BPS ------------- */
@@ -274,7 +291,5 @@ void PlayVideo::addVideoMideaTrackOnPeerConnection(shared_ptr<rtc::PeerConnectio
     rtc::Description::Video media("video", rtc::Description::Direction::SendOnly);
     media.addH264Codec(96);
     media.addSSRC(ssrc, "video-send");
-    track.videoTrackMx.lock();
-    track.videoTrack = pc->addTrack(media);
-    track.videoTrackMx.unlock();
+    videoTrack = pc->addTrack(media);
 }
