@@ -21,9 +21,6 @@
 
 using std::shared_ptr;
 
-extern bool connected;
-extern std::shared_mutex connMx;
-
 class PlayVideo
 {
 private:
@@ -46,13 +43,17 @@ private:
 
   static GstFlowReturn sinkCallback(GstElement *sink, shared_ptr<rtc::Track> *track);
 
+  std::promise<void> playPrmoise;
+  std::future<void> playFuture;
+
 public:
   PlayVideo(); // default computer(Laptop) WebCam ex) Linux-/dev/video0
   PlayVideo(std::string video_dev);
   PlayVideo(std::string video_dev, int width, int height);
   ~PlayVideo();
 
-  int play(); // Must run as thread
+  int ready4Play(); // Must run as thread
+  void startPlay();
 
   void addVideoMideaTrackOnPeerConnection(shared_ptr<rtc::PeerConnection> pc);
 

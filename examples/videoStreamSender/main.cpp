@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) try {
 
 #ifdef PLAY_VIDEO_NUM /* -------------------------------------- PLAY VIDEO NUM 1 */
     PlayVideo video_middle(VIDEO1);
-    std::thread videoStreamThread_1(&PlayVideo::play, &video_middle);
+    std::thread videoStreamThread_1(&PlayVideo::ready4Play, &video_middle);
     videoStreamThread_1.detach();
 #if PLAY_VIDEO_NUM == 2 /* ------------------------------------ PLAY VIDEO NUM 2 */
     PlayVideo video_middle(VIDEO2);
@@ -145,14 +145,16 @@ int main(int argc, char *argv[]) try {
             */
             pc = createPeerConnection(config, wws, id);
 
-            // std::string sdp = message["sdp"].get<std::string>();
-            // pc->setRemoteDescription(rtc::Description(sdp, type));
+            pc->onStateChange([](rtc::PeerConnection::State state) {
+                std::cout << "State: " << state << std::endl;
+            });
 
-            // std::cout << "Answering to " + id << std::endl;
-
-            // video_middle.addVideoMideaTrackOnPeerConnection(pc);
-
-            // pc->setLocalDescription();
+            pc->onGatheringStateChange([&video_middle](rtc::PeerConnection::GatheringState state) {
+                std::cout << "Gathering State: " << state << std::endl;
+                if (state == rtc::PeerConnection::GatheringState::Complete) {
+                    video_middle.startPlay();
+                }
+            });
 
         } else  {
             return;
@@ -196,48 +198,6 @@ int main(int argc, char *argv[]) try {
         below section is run only the WebSocket is opened
     */
     while (true) {
-        // std::string remoteId;
-        // std::cout << "Enter a remote ID to send offer: ";
-        // std::cin >> remoteId;
-        // std::cin.ignore();
-
-        // if (remoteId.empty())
-        //     break;
-
-        // if (remoteId == localId) {
-        //     std::cout << "Invalid remote ID (This is the local ID)" << std::endl;
-        //     continue;
-        // }
-
-        // std::cout << "Offering to " + remoteId << std::endl;
-        // shared_ptr<rtc::PeerConnection> pc = createPeerConnection(config, ws, remoteId);
-
-        // // We are the offerer, so create a data channel to initiate the process
-        // const std::string label = "This is the gstreamer react test";
-        // std::cout << "Create DataChannel with label \"" << label << "\"" << std::endl;
-        // shared_ptr<rtc::DataChannel> dc = pc->createDataChannel(label);
-
-        // dc->onOpen([remoteId, wdc = make_weak_ptr(dc)]() {
-        //     std::cout << "DataChannel from " << remoteId << " open" << std::endl;
-        //     if (auto dataChannelPtr = wdc.lock())
-        //         dataChannelPtr->send("Hello from " + localId);
-        // });
-
-        // dc->onClosed([remoteId]() { std::cout << "DataChannel from " << remoteId << " closed" << std::endl; });
-
-        // dc->onMessage([remoteId, wdc = make_weak_ptr(dc)](auto data) {
-        //     // data holds either std::string or rtc::binary
-        //     if (std::holds_alternative<std::string>(data))
-        //         std::cout << "Message from " << remoteId << " received: " << std::get<std::string>(data)
-        //                   << std::endl;
-        //     else
-        //         std::cout << "Binary message from " << remoteId
-        //                   << " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
-        // });
-
-        // /* Hold and register dataChannel Connection member */
-        // dataChannelMap.emplace(remoteId, dc);
-
         std::string quit;
         std::cout << "Quit? (q or Q)" << std::endl;
         std::cin >> quit;
@@ -274,19 +234,6 @@ shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration &c
                                                      std::string id) {
     shared_ptr<rtc::PeerConnection> pc
         = std::make_shared<rtc::PeerConnection>(config);
-
-    pc->onStateChange([](rtc::PeerConnection::State state) {
-        std::cout << "State: " << state << std::endl;
-    });
-
-    pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state) {
-        std::cout << "Gathering State: " << state << std::endl;
-        if (state == rtc::PeerConnection::GatheringState::Complete) {
-            connMx.lock();
-            connected = true;
-            connMx.unlock();
-        }
-    });
 
     pc->onLocalDescription([wws, id](rtc::Description description) {
         json message = {

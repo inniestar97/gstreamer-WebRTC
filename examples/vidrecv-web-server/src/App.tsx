@@ -6,7 +6,7 @@ const pc_config: RTCConfiguration = {
       urls: "stun:stun.l.google.com:19302",
     },
   ],
-  // bundlePolicy: 'max-bundle',
+  bundlePolicy: 'max-bundle',
 };
 
 const localId: string = "ADRemote";
@@ -126,7 +126,7 @@ function App() {
         return;
       }
       videoRef.current.srcObject = evt.streams[0];
-      // videoRef.current.play();
+      videoRef.current.play();
     }
 
     setPeerConnectionMap((peerConnectionMap[id] = pc));

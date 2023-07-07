@@ -44,6 +44,8 @@ PlayVideo::PlayVideo(std::string video_dev, int width, int height)
     terminate        = FALSE;
 
     videoTrack = nullptr;
+
+    playFuture = playPrmoise.get_future();
 }
 
 PlayVideo::~PlayVideo() {
@@ -57,7 +59,7 @@ PlayVideo::~PlayVideo() {
  * @brief Play gstreamer video using video device.
  * 
  */
-int PlayVideo::play()
+int PlayVideo::ready4Play()
 {
 #if DEBUG
     std::cout << "PlayVideo video play!!!" << std::endl;
@@ -130,6 +132,9 @@ int PlayVideo::play()
     gst_caps_unref(rawFramerateCaps);
     gst_caps_unref(h264caps);
 
+    // wait until ready for play
+    playFuture.get();
+
     ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
     if (ret == GST_STATE_CHANGE_FAILURE) {
         g_printerr ("Unable to set the pipeline to the playing state.\n");
@@ -184,6 +189,10 @@ int PlayVideo::play()
     return 0;
 }
 
+void PlayVideo::startPlay() {
+    playPrmoise.set_value();
+}
+
 /**
  * @brief Callback that is called every stream data have benn made.
  * 
@@ -192,16 +201,8 @@ int PlayVideo::play()
  */
 GstFlowReturn PlayVideo::sinkCallback(GstElement *sink, shared_ptr<rtc::Track> *track)
 {
-    connMx.lock_shared();
-    if (!connected) {
-        connMx.unlock_shared();
-        return GST_FLOW_OK;
-    }
-    connMx.unlock_shared();
-
     auto _track = *track;
 
-    // track->videoTrackMx.lock_shared();
 #if DEBUG
     if (track->videoTrack == nullptr) {
         std::cout << "track is null" << std::endl;
@@ -215,10 +216,8 @@ GstFlowReturn PlayVideo::sinkCallback(GstElement *sink, shared_ptr<rtc::Track> *
     }
 #endif
     if (_track == nullptr || _track->isClosed()) {
-        // track->videoTrackMx.unlock_shared();
         return GST_FLOW_OK;
     }
-    // track->videoTrackMx.unlock_shared();
 
     GstSample *sample;
     g_signal_emit_by_name(sink, "pull-sample", &sample);
