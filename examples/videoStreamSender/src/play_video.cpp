@@ -237,14 +237,14 @@ GstFlowReturn PlayVideo::sinkCallback(GstElement *sink, shared_ptr<rtc::Track> *
 
     /* ------- START send msgToOther using media sender -------- */
 
-    if (msgToOther.size() < sizeof(rtc::RtpHeader)) {
-        std::cout << "Message size is smaller than RTP header size" << std::endl;
-        gst_sample_unref(sample);
-        return GST_FLOW_OK;
-    }
+    // if (msgToOther.size() < sizeof(rtc::RtpHeader)) {
+    //     std::cout << "Message size is smaller than RTP header size" << std::endl;
+    //     gst_sample_unref(sample);
+    //     return GST_FLOW_OK;
+    // }
 
-    auto rtp = reinterpret_cast<rtc::RtpHeader *>(msgToOther.data());
-    rtp->setSsrc(ssrc);
+    // auto rtp = reinterpret_cast<rtc::RtpHeader *>(msgToOther.data());
+    // rtp->setSsrc(ssrc);
     _track->send(reinterpret_cast<const std::byte *>(msgToOther.data()), msgToOther.size());
     /* -------- END send msgToOther using media sender --------- */
 
@@ -286,9 +286,6 @@ GstFlowReturn PlayVideo::sinkCallback(GstElement *sink, shared_ptr<rtc::Track> *
     return GST_FLOW_OK;
 }
 
-void PlayVideo::addVideoMideaTrackOnPeerConnection(shared_ptr<rtc::PeerConnection> pc) {
-    rtc::Description::Video media("video", rtc::Description::Direction::SendOnly);
-    media.addH264Codec(96);
-    media.addSSRC(ssrc, "video-send");
-    videoTrack = pc->addTrack(media);
+void PlayVideo::setTrack(std::shared_ptr<rtc::Track>& track) {
+    this->videoTrack = track;
 }

@@ -55,7 +55,7 @@ public:
   int ready4Play(); // Must run as thread
   void startPlay();
 
-  void addVideoMideaTrackOnPeerConnection(shared_ptr<rtc::PeerConnection> pc);
+  void setTrack(std::shared_ptr<rtc::Track>& track);
 
 };
 

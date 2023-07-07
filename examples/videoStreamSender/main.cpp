@@ -156,6 +156,12 @@ int main(int argc, char *argv[]) try {
                 }
             });
 
+            pc->onTrack([&video_middle](std::shared_ptr<rtc::Track> track) {
+                std::cout << "On Track is called" << std::endl;
+
+                video_middle.setTrack(track);
+            });
+
         } else  {
             return;
         }
@@ -163,7 +169,7 @@ int main(int argc, char *argv[]) try {
         if (type == "offer") {
             auto sdp = message["sdp"].get<std::string>();
 
-            video_middle.addVideoMideaTrackOnPeerConnection(pc);
+            // video_middle.addVideoMideaTrackOnPeerConnection(pc);
 
             pc->setRemoteDescription(rtc::Description(sdp, type));
 

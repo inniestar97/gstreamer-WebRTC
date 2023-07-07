@@ -63,7 +63,7 @@ function App() {
         if (!pc) {
           console.log(`There's no ${id} before.`);
 
-          if (type != 'offer')
+          if (type !== 'offer')
             return;
 
           console.log(`Answering to ${id}`);
@@ -71,27 +71,27 @@ function App() {
         }
           
         switch (type) { 
-          case 'offer': // Maybe, we are not gonna get 'offer' description
-          case 'answer':
-            pc.setRemoteDescription({
-              sdp : message.sdp,
-              type : message.type 
-            });
-            if (type == 'offer') {
-              // send answer
-              sendLocalDescription(wsRef.current!, id, pc, 'answer');
-            }
-            break;
+        case 'offer': // Maybe, we are not gonna get 'offer' description
+        case 'answer':
+          pc.setRemoteDescription({
+            sdp : message.sdp,
+            type : message.type 
+          });
+          // if (type === 'offer') {
+          //   // send answer
+          //   sendLocalDescription(wsRef.current!, id, pc, 'answer');
+          // }
+          break;
 
-          case 'candidate':
-            pc.addIceCandidate({
-              candidate : message.candidate,
-              sdpMid : message.mid
-            });
-            break;
+        case 'candidate':
+          pc.addIceCandidate({
+            candidate : message.candidate,
+            sdpMid : message.mid
+          });
+          break;
 
-          default: // We are not handle this section
-            break;
+        default: // We are not handle this section
+          break;
         }
           
       };
@@ -128,6 +128,7 @@ function App() {
       videoRef.current.srcObject = evt.streams[0];
       videoRef.current.play();
     }
+
 
     setPeerConnectionMap((peerConnectionMap[id] = pc));
 
@@ -169,10 +170,12 @@ function App() {
   };
 
   const sendLocalDescription = (ws: WebSocket, id: string, pc: RTCPeerConnection, type: string) => {
-    (type == 'offer' ? pc.createOffer({ offerToReceiveVideo: true }) : pc.createAnswer())
+    (type === 'offer' ? pc.createOffer({ offerToReceiveVideo: true }) : pc.createAnswer())
+    // (type == 'offer' ? pc.createOffer() : pc.createAnswer())
       .then((desc) => pc.setLocalDescription(desc))
       .then(() => {
         const { sdp, type } = pc.localDescription!;
+        console.log(pc.localDescription);
         ws.send(JSON.stringify(
           {
             id,
@@ -199,7 +202,7 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <input type='text'value={ remoteId } onChange={ (e) => { setRemoteId(e.target.value); } }/>
+        <input type='text' value={ remoteId } onChange={ (e) => { setRemoteId(e.target.value); } }/>
         <button ref={ buttonRef } onClick={ buttonOnClick }>Connect!</button>
       </header>
       <video
